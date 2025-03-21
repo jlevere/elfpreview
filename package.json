@@ -15,7 +15,7 @@
     "directory": "."
   },
   "bin": {
-    "wit2ts": "./bin/wit2ts"
+    "wit2ts": "./wit2ts/bin/wit2ts"
   },
   "activationEvents": [],
   "main": "./out/extension.js",
