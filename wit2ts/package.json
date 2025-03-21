@@ -1,0 +1,59 @@
+{
+	"name": "@vscode/wasm-component-model",
+	"version": "1.0.1",
+	"description": "A VS Code specific component model implementation",
+	"author": "Visual Studio Code Team",
+	"license": "MIT",
+	"keywords": [
+		"VSCode",
+		"WASM",
+		"Component Model"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/microsoft/vscode-wasm.git"
+	},
+	"bugs": {
+		"url": "https://github.com/microsoft/vscode-wasm/issues"
+	},
+	"homepage": "https://github.com/microsoft/vscode-wasm#readme",
+	"engines": {
+		"node": ">=18.18.2"
+	},
+	"bin": {
+		"wit2ts": "./bin/wit2ts"
+	},
+	"enabledApiProposals": [],
+	"dependencies": {
+		"semver": "^7.6.0",
+		"uuid": "^9.0.1",
+		"yargs": "^17.7.2"
+	},
+	"devDependencies": {
+		"@types/semver": "^7.5.8",
+		"@types/uuid": "^9.0.8",
+		"@types/yargs": "^17.0.31",
+		"tsx": "^4.19.3",
+		"typescript": "^5.8.2"
+	},
+	"scripts": {
+		"compile": "tsc -b ./tsconfig.json",
+		"watch": "tsc -b ./tsconfig.watch.json -w",
+		"clean": "rimraf lib",
+		"lint": "eslint --ext ts src",
+		"test": "npm run test:desktop",
+		"test:desktop": "mocha",
+		"all": "npm run clean && npm run compile && npm run lint",
+		"all:publish": "git clean -xfd . && npm install && npm run compile:publish && npm run lint && npm test",
+		"generate:testCase": "wasm-tools component wit --json ./src/common/test/test-data.wit | node ./lib/main.js --stdin --outDir ./src/common/test"
+	},
+	"pnpm": {
+		"ignoredBuiltDependencies": [
+			"vscode-wasi"
+		],
+		"onlyBuiltDependencies": [
+			"esbuild",
+			"vscode-wasi"
+		]
+	}
+}
