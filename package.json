@@ -1,0 +1,83 @@
+{
+  "name": "elfpreview",
+  "displayName": "elfPreview",
+  "description": "Preview ELF binary files in VS Code",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.98.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "bin": {
+    "wit2ts": "./bin/wit2ts"
+  },
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "elfpreview.showPreview",
+        "title": "ELF: Show Preview"
+      }
+    ],
+    "customEditors": [
+      {
+        "viewType": "elfpreview.elfViewer",
+        "displayName": "ELF Preview",
+        "selector": [
+          {
+            "filenamePattern": "*.{o,so,out,elf,bin,exe}"
+          }
+        ],
+        "priority": "option"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "elfpreview.showPreview",
+          "when": "resourceExtname =~ /\\.o$|\\.so$|\\.out$|\\.elf$|\\.bin$|\\.exe$/"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "elfpreview.showPreview",
+          "when": "resourceExtname =~ /\\.o$|\\.so$|\\.out$|\\.elf$|\\.bin$|\\.exe$/",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "pnpm compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "pnpm compile && pnpm lint",
+    "lint": "eslint src --ext ts",
+    "test": "vscode-test",
+    "generate": "wit2ts --outDir ./src ./wit/test.wit"
+  },
+  "devDependencies": {
+    "@bytecodealliance/jco": "^1.10.2",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.98.0",
+    "@typescript-eslint/eslint-plugin": "^8.26.1",
+    "@typescript-eslint/parser": "^8.25.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/wasm-component-model": "^1.0.1",
+    "@vscode/wasm-wasi": "^1.0.1",
+    "eslint": "^9.21.0",
+    "typescript": "^5.7.3"
+  },
+  "pnpm": {
+    "ignoredBuiltDependencies": [
+      "vscode-wasi"
+    ],
+    "onlyBuiltDependencies": [
+      "vscode-wasi"
+    ]
+  }
+}

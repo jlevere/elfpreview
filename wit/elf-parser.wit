@@ -1,0 +1,45 @@
+package elfpreview:parser;
+
+interface types {
+  record sectioninfo {
+    name: string,
+    size: u64,
+    address: u64,
+    typename: string,
+  }
+
+  record programinfo {
+    typename: string,
+    flagstring: string,
+    vaddr: u64,
+    paddr: u64,
+    filesz: u64,
+    memsz: u64,
+  }
+
+  record symbolinfo {
+    name: string,
+    value: u64,
+    size: u64,
+    isfunction: bool,
+  }
+
+  record elfinfo {
+    machine: string,
+    entrypoint: u64,
+    sectionheaders: list<sectioninfo>,
+    programheaders: list<programinfo>,
+    symbols: list<symbolinfo>,
+  }
+}
+
+interface elfparser {
+  use types.{elfinfo};
+  
+  // Parse an ELF binary file
+  parseelf: func(data: list<u8>) -> result<elfinfo, string>;
+}
+
+world elfpreview {
+  export elfparser;
+}

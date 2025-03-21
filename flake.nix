@@ -21,7 +21,7 @@
       rust = with fenix.packages.${system};
         combine [
           stable.toolchain
-          targets.wasm32-wasip2.stable.rust-std
+          targets.wasm32-unknown-unknown.stable.rust-std
         ];
     in {
       devShells = {
@@ -36,7 +36,6 @@
             wasm-tools
 
             llvmPackages.bintools
-            go-task
 
             rust
           ];

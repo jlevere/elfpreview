@@ -1,0 +1,15 @@
+[package]
+name = "elfpreview"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"] 
+
+[dependencies]
+goblin = "0.9.3"
+wit-bindgen = "0.41.0"
+
+
+[package.metadata.component]
+package = "elfpreview:parser"
