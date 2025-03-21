@@ -5,7 +5,8 @@ wit_bindgen::generate!({
 });
 
 use crate::exports::elfpreview::parser::elfparser::Guest;
-use goblin::elf::Elf;
+use goblin::elf::{header, Elf};
+use scroll::Pread;
 
 struct ElfParserImpl;
 
@@ -107,6 +108,76 @@ impl Guest for ElfParserImpl {
                 Ok(info)
             }
             Err(e) => Err(format!("{:?}", e)),
+        }
+    }
+
+    fn validateelf(data: Vec<u8>) -> Result<elfpreview::parser::types::Headerinfo, String> {
+        // Basic size check
+        if data.len() < std::mem::size_of::<header::header64::Header>() {
+            return Err("File too small to be an ELF".to_string());
+        }
+
+        // Check magic number
+        if data[0] != 0x7F || data[1] != 0x45 || data[2] != 0x4C || data[3] != 0x46 {
+            return Err("Invalid ELF magic number".to_string());
+        }
+
+        // Parse just the header directly
+        match data.pread::<header::Header>(0) {
+            Ok(header) => {
+                // Get class (32/64 bit)
+                let class = match header.e_ident[header::EI_CLASS] {
+                    header::ELFCLASS32 => "32-bit".to_string(),
+                    header::ELFCLASS64 => "64-bit".to_string(),
+                    _ => "unknown".to_string(),
+                };
+
+                // Get endianness
+                let endianness = match header.e_ident[header::EI_DATA] {
+                    header::ELFDATA2LSB => "little-endian".to_string(),
+                    header::ELFDATA2MSB => "big-endian".to_string(),
+                    _ => "unknown".to_string(),
+                };
+
+                // Get OS ABI
+                let osabi = match header.e_ident[header::EI_OSABI] {
+                    header::ELFOSABI_SYSV => "UNIX System V".to_string(),
+                    header::ELFOSABI_LINUX => "Linux".to_string(),
+                    header::ELFOSABI_FREEBSD => "FreeBSD".to_string(),
+                    header::ELFOSABI_NETBSD => "NetBSD".to_string(),
+                    header::ELFOSABI_SOLARIS => "Solaris".to_string(),
+                    _ => format!("Unknown ({})", header.e_ident[header::EI_OSABI]),
+                };
+
+                // Get file type
+                let filetype = match header.e_type {
+                    header::ET_NONE => "NONE".to_string(),
+                    header::ET_REL => "REL".to_string(),
+                    header::ET_EXEC => "EXEC".to_string(),
+                    header::ET_DYN => "DYN".to_string(),
+                    header::ET_CORE => "CORE".to_string(),
+                    _ => format!("Unknown ({})", header.e_type),
+                };
+
+                // Calculate headers size from header info
+                let headers_size = header.e_phoff
+                    + (header.e_phentsize as u64 * header.e_phnum as u64)
+                    + (header.e_shentsize as u64 * header.e_shnum as u64);
+
+                let header_info = elfpreview::parser::types::Headerinfo {
+                    isvalid: true,
+                    class,
+                    endianness,
+                    osabi,
+                    filetype,
+                    machine: header::machine_to_str(header.e_machine).to_string(),
+                    version: header.e_version,
+                    headerssize: headers_size,
+                };
+
+                Ok(header_info)
+            }
+            Err(e) => Err(format!("Invalid ELF header: {:?}", e)),
         }
     }
 }

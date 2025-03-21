@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { elfpreview } from './elfpreview';
 import { Types } from './elfpreview';
+import { ElfFileReader } from './fileReader';
 
 
 import { RAL, Memory, WasmContext, ResourceManagers } from '@vscode/wasm-component-model';
@@ -15,7 +16,7 @@ export async function activate(context: vscode.ExtensionContext) {
     // Load and initialize the WebAssembly module
     try {
         // Get the path to the WebAssembly file
-        const wasmPath = vscode.Uri.file(path.join(context.extensionPath, 'target/wasm32-unknown-unknown/debug/', 'elfpreview.wasm'));
+        const wasmPath = vscode.Uri.file(path.join(context.extensionPath, 'target/wasm32-unknown-unknown/release/', 'elfpreview.wasm'));
         const wasmUri = wasmPath.with({ scheme: 'vscode-resource' });
 
         // Load the WebAssembly module
@@ -87,8 +88,8 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
 
     async openCustomDocument(
         uri: vscode.Uri,
-        openContext: vscode.CustomDocumentOpenContext,
-        token: vscode.CancellationToken
+        _openContext: vscode.CustomDocumentOpenContext,
+        _token: vscode.CancellationToken
     ): Promise<vscode.CustomDocument> {
         return { uri, dispose: () => { } };
     }
@@ -96,7 +97,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
     async resolveCustomEditor(
         document: vscode.CustomDocument,
         webviewPanel: vscode.WebviewPanel,
-        token: vscode.CancellationToken
+        _token: vscode.CancellationToken
     ): Promise<void> {
         const uri = document.uri;
         webviewPanel.webview.options = {
@@ -105,23 +106,31 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
         };
 
         try {
-            // Read the ELF file
-            const fileData = await vscode.workspace.fs.readFile(uri);
-
             if (!elfParser) {
                 throw new Error('ELF Parser not initialized');
             }
 
-            // Parse the ELF data using our WebAssembly module
-            const parsedData = elfParser.elfparser.parseelf(fileData);
+            const fileReader = new ElfFileReader(document.uri);
+            const filename = document.uri.path.split('/').pop() || "Unknown ELF File";
 
-            // Convert the parsed data to a format suitable for our HTML template
-            const elfData = this.formatElfData(parsedData);
+
+            const headerData = await fileReader.readChunk(0, 64);
+
+            const elfHeader = elfParser.elfparser.validateelf(headerData);
+            if (!elfHeader.isvalid) {
+                throw new Error(`File is not recognized as an elf`);
+            };
+
+            const elfData = await vscode.workspace.fs.readFile(document.uri);
+
+            const parsedData = elfParser.elfparser.parseelf(elfData);
+
 
             // Set up the webview HTML
             webviewPanel.webview.html = this.getHtmlForWebview(
                 webviewPanel.webview,
-                elfData
+                parsedData,
+                filename,
             );
         } catch (error) {
             webviewPanel.webview.html = `<html><body>
@@ -133,62 +142,15 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
         }
     }
 
-    private formatElfData(elfInfo: Types.Elfinfo): string {
 
-        const bigIntReplacer = (key: string, value: any) => {
-            if (typeof value === 'bigint') {
-                return value.toString();
-            }
-            return value;
-        };
-
-        return JSON.stringify({
-            machine: elfInfo.machine,
-            entry_point: elfInfo.entrypoint,
-            section_headers: elfInfo.sectionheaders.map(section => ({
-                name: section.name,
-                type_name: section.typename,
-                address: section.address,
-                size: section.size
-            })),
-            program_headers: elfInfo.programheaders.map(program => ({
-                type_name: program.typename,
-                flags: program.flagstring,
-                vaddr: program.vaddr,
-                paddr: program.paddr,
-                filesz: program.filesz,
-                memsz: program.memsz
-            })),
-            symbols: elfInfo.symbols.map(symbol => ({
-                name: symbol.name,
-                value: symbol.value,
-                size: symbol.size,
-                is_function: symbol.isfunction
-            }))
-        }, bigIntReplacer);
-    }
-
-    private getHtmlForWebview(webview: vscode.Webview, elfDataJson: string): string {
+    private getHtmlForWebview(webview: vscode.Webview, data: Types.Elfinfo, filename: string): string {
         try {
-            // Parse JSON data
-            const data = JSON.parse(elfDataJson);
-
-            // Check if there was an error
-            if (data.error) {
-                return `<html><body>
-                    <div style="color: red; padding: 20px;">
-                        <h1>Error parsing ELF file</h1>
-                        <pre>${data.error}</pre>
-                    </div>
-                </body></html>`;
-            }
-
             return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ELF File Preview</title>
+    <title>${filename}</title>
     <style>
         body {
             font-family: var(--vscode-editor-font-family);
@@ -264,7 +226,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
 </head>
 <body>
     <div class="container">
-        <h1>ELF File Preview</h1>
+        <h1>${filename}</h1>
         
         <div class="basic-info">
             <h2>Basic Information</h2>
@@ -275,7 +237,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
                 </tr>
                 <tr>
                     <th>Entry Point:</th>
-                    <td>0x${data.entry_point.toString(16)}</td>
+                    <td>0x${data.entrypoint}</td>
                 </tr>
             </table>
         </div>
@@ -295,7 +257,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
                     <th>Address</th>
                     <th>Size</th>
                 </tr>
-                ${data.section_headers.map((section: Types.Sectioninfo) => `
+                ${data.sectionheaders.map((section: Types.Sectioninfo) => `
                 <tr>
                     <td>${section.name}</td>
                     <td>${section.typename}</td>
@@ -317,7 +279,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
                     <th>File Size</th>
                     <th>Memory Size</th>
                 </tr>
-                ${data.program_headers.map((program: Types.Programinfo) => `
+                ${data.programheaders.map((program: Types.Programinfo) => `
                 <tr>
                     <td>${program.typename}</td>
                     <td>${program.flagstring}</td>
