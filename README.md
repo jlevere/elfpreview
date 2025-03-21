@@ -1,14 +1,16 @@
 # elfpreview README
 
-This is the README for your extension "elfpreview". After writing up a brief description, we recommend including the following sections.
+`elfpreview` is an editor extention in vscode that displays `readelf` like information about elf binaries.
+
+
+The extention adds an aditional editor, similar to how a hex editor might work, which is used to display a clean table view of information about the currenly open file.
+
+![example-view](./docs/example-simple-view.png)
+
 
 ## Features
 
 Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
 
 > Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
 
@@ -29,23 +31,16 @@ This extension contributes the following settings:
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+- Running `pnpm generate` results in typescript type error.  This is because `wit2ts` mixes up some types that need to be manually corrected.  I am unsure if this is a bug or a skill issue.
+
+- Using the expected build target for rust, `wasm32-wasi` or `wasm32-wasip2` results in linker errors.  I am unsure why this is the case, or for that matter, why using a more generic target still works, but it does so :shrug:
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
+### 0.0.1
 
-### 1.0.0
+Initial release
 
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
 
 ---
 
@@ -55,17 +50,3 @@ Ensure that you've read through the extensions guidelines and follow the best pr
 
 * [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
 
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**

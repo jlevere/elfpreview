@@ -13,7 +13,6 @@ impl Guest for ElfParserImpl {
     fn parseelf(data: Vec<u8>) -> Result<elfpreview::parser::types::Elfinfo, String> {
         match Elf::parse(&data) {
             Ok(elf) => {
-                // Extract section information
                 let sections = elf
                     .section_headers
                     .iter()
@@ -44,12 +43,11 @@ impl Guest for ElfParserImpl {
                             name,
                             size: header.sh_size,
                             address: header.sh_addr,
-                            typename, // Updated to match camelCase
+                            typename,
                         }
                     })
                     .collect();
 
-                // Extract program headers information
                 let programs = elf
                     .program_headers
                     .iter()
@@ -74,8 +72,8 @@ impl Guest for ElfParserImpl {
                         );
 
                         elfpreview::parser::types::Programinfo {
-                            typename,   // Updated to match camelCase
-                            flagstring, // Updated to match camelCase
+                            typename,
+                            flagstring,
                             vaddr: header.p_vaddr,
                             paddr: header.p_paddr,
                             filesz: header.p_filesz,
@@ -84,7 +82,6 @@ impl Guest for ElfParserImpl {
                     })
                     .collect();
 
-                // Extract symbols
                 let symbols = elf
                     .syms
                     .iter()

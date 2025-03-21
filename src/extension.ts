@@ -134,7 +134,6 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
     }
 
     private formatElfData(elfInfo: Types.Elfinfo): string {
-        // Convert the Elfinfo object to a format that matches our template
 
         const bigIntReplacer = (key: string, value: any) => {
             if (typeof value === 'bigint') {

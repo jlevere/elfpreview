@@ -9,6 +9,11 @@
   "categories": [
     "Other"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jlevere/elfpreview.git",
+    "directory": "."
+  },
   "bin": {
     "wit2ts": "./bin/wit2ts"
   },
