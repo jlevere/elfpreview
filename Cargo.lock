@@ -69,6 +69,7 @@ name = "elfpreview"
 version = "0.1.0"
 dependencies = [
  "goblin",
+ "scroll",
  "wit-bindgen",
 ]
 
