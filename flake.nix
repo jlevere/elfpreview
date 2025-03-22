@@ -6,7 +6,7 @@
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/d8b6e7045911cbe6b2d6a7e31c9c112e05b19221";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
