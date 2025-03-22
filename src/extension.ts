@@ -222,6 +222,13 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
             border: 1px solid var(--vscode-panel-border);
             border-top: none;
         }
+
+        #symbolFilter {
+            background-color: var(--vscode-editor-background);
+            border: 1px solid var(--vscode-panel-border);
+            padding: 5px;
+            color: var(--vscode-editor-foreground);
+        }
     </style>
 </head>
 <body>

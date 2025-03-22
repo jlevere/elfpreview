@@ -34,13 +34,13 @@ interface types {
 
   record headerinfo {
     isvalid: bool,
-    class: string,      // 32-bit or 64-bit
-    endianness: string, // little or big
-    osabi: string,      // e.g., UNIX, Linux, etc.
-    filetype: string,   // EXEC, DYN, etc.
-    machine: string,    // architecture
+    class: string,
+    endianness: string,
+    osabi: string,
+    filetype: string,
+    machine: string,
     version: u32,
-    headerssize: u64,   // Size of all headers
+    headerssize: u64,
   }
 }
 
