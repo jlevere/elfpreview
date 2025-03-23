@@ -1,5 +1,5 @@
-/target
+**/target
 /out
 node_modules
 .vscode-test
-vscode-wasm
+test_files

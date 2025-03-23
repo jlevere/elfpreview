@@ -63,13 +63,13 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "pnpm compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "pretest": "pnpm compile && pnpm lint",
-    "lint": "eslint src --ext ts",
+    "build": "pnpm run compile:ts && pnpm run compile:rust",
+    "compile:rust": "cd rust && cargo build --target wasm32-unknown-unknown && cd ..",
+    "compile:ts": "tsc -b tsconfig.json",
+    "watch:ts": "tsc -b tsconfig.json -w",
+    "lint": "eslint --ext .ts ts/src",
     "test": "vscode-test",
-    "generate": "wit2ts --outDir ./src ./wit/elf-parser.wit"
+    "generate:wit": "wit2ts --outDir ./ts/src ./wit/elf-parser.wit"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",

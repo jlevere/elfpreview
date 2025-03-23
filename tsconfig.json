@@ -1,17 +1,12 @@
 {
-	"compilerOptions": {
-		"module": "Node16",
-		"target": "ES2022",
-		"outDir": "out",
-		"lib": [
-			"ES2022",
-			"WebWorker" // see https://github.com/microsoft/vscode/issues/205537
-		],
-		"sourceMap": true,
-		"rootDir": "src",
-		"strict": true, /* enable all strict type-checking options */
-	},
-	"include": [
-		"src/**/*",
-	]
+    "compilerOptions": {
+        "incremental": true,
+        "composite": true
+    },
+    "files": [],
+    "references": [
+        {
+            "path": "ts/tsconfig.json"
+        }
+    ]
 }

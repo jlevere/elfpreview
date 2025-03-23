@@ -1,0 +1,18 @@
+{
+	"compilerOptions": {
+		"module": "Node16",
+		"target": "ES2022",
+		"lib": [
+			"ES2022",
+			"WebWorker" // see https://github.com/microsoft/vscode/issues/205537
+		],
+		"sourceMap": true,
+		"rootDir": ".",
+		"outDir": "../out",
+		"tsBuildInfoFile": "../out/compile.tsbuildInfo",
+		"strict": true, /* enable all strict type-checking options */
+	},
+	"include": [
+		"src/**/*",
+	]
+}
