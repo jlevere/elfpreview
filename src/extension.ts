@@ -3,8 +3,6 @@ import * as path from 'path';
 import { elfpreview } from './elfpreview';
 import { Types } from './elfpreview';
 import { ElfFileReader } from './fileReader';
-
-
 import { RAL, Memory, WasmContext, ResourceManagers } from '@vscode/wasm-component-model';
 
 
@@ -17,7 +15,6 @@ export async function activate(context: vscode.ExtensionContext) {
     try {
         // Get the path to the WebAssembly file
         const wasmPath = vscode.Uri.file(path.join(context.extensionPath, 'target/wasm32-unknown-unknown/release/', 'elfpreview.wasm'));
-        const wasmUri = wasmPath.with({ scheme: 'vscode-resource' });
 
         // Load the WebAssembly module
         const wasmBytes = await vscode.workspace.fs.readFile(wasmPath);
@@ -88,8 +85,6 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
 
     async openCustomDocument(
         uri: vscode.Uri,
-        _openContext: vscode.CustomDocumentOpenContext,
-        _token: vscode.CancellationToken
     ): Promise<vscode.CustomDocument> {
         return { uri, dispose: () => { } };
     }
@@ -97,9 +92,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
     async resolveCustomEditor(
         document: vscode.CustomDocument,
         webviewPanel: vscode.WebviewPanel,
-        _token: vscode.CancellationToken
     ): Promise<void> {
-        const uri = document.uri;
         webviewPanel.webview.options = {
             enableScripts: true,
             localResourceRoots: [this.extensionUri]
@@ -116,8 +109,8 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
 
             const headerData = await fileReader.readChunk(0, 64);
 
-            const elfHeader = elfParser.elfparser.validateelf(headerData);
-            if (!elfHeader.isvalid) {
+            const isvalid = elfParser.elfparser.validateelf(headerData);
+            if (!isvalid) {
                 throw new Error(`File is not recognized as an elf`);
             };
 
@@ -128,7 +121,6 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
 
             // Set up the webview HTML
             webviewPanel.webview.html = this.getHtmlForWebview(
-                webviewPanel.webview,
                 parsedData,
                 filename,
             );
@@ -138,12 +130,13 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
                     <h1>Error parsing ELF file</h1>
                     <pre>${error}</pre>
                 </div>
-            </body></html>`;
+            </body></html>`; // TODO: break this out into jsx stuff
         }
     }
 
 
-    private getHtmlForWebview(webview: vscode.Webview, data: Types.Elfinfo, filename: string): string {
+    // TODO: breakout into tsx/jsx stuff
+    private getHtmlForWebview(data: Types.Elfinfo, filename: string): string {
         try {
             return `<!DOCTYPE html>
 <html lang="en">
@@ -215,7 +208,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
             background-color: var(--vscode-list-activeSelectionBackground);
             color: var(--vscode-list-activeSelectionForeground);
         }
-        
+
         .tabcontent {
             display: none;
             padding: 6px 12px;
@@ -226,27 +219,89 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
         #symbolFilter {
             background-color: var(--vscode-editor-background);
             border: 1px solid var(--vscode-panel-border);
-            padding: 5px;
+            padding: 8px 12px;
             color: var(--vscode-editor-foreground);
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        .file-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .file-metadata {
+            margin-bottom: 20px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin-left: 10px;
+            font-size: 12px;
+            background-color: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>${filename}</h1>
+        <h1>${filename} 
+            ${data.info.stripped ?
+                    '<span class="badge" title="Debug symbols have been removed">Stripped</span>' :
+                    '<span class="badge" style="color: black; background-color: var(--vscode-debugIcon-startForeground)">Debug Symbols</span>'}
+        </h1>
         
-        <div class="basic-info">
-            <h2>Basic Information</h2>
-            <table>
-                <tr>
-                    <th>Machine:</th>
-                    <td>${data.machine}</td>
-                </tr>
-                <tr>
-                    <th>Entry Point:</th>
-                    <td>0x${data.entrypoint}</td>
-                </tr>
-            </table>
+       <div class="basic-info">
+            <h2>File Information</h2>
+            <div class="file-info-grid">
+                <div class="file-metadata">
+                    <table>
+                        <tr>
+                            <th>File Type:</th>
+                            <td>${data.info.filetype}</td>
+                        </tr>
+                        <tr>
+                            <th>Machine Architecture:</th>
+                            <td>${data.info.machine}</td>
+                        </tr>
+                        <tr>
+                            <th>Class:</th>
+                            <td>${data.info.class}</td>
+                        </tr>
+                        <tr>
+                            <th>Endianness:</th>
+                            <td>${data.info.endianness}</td>
+                        </tr>
+                        <tr>
+                            <th>OS ABI:</th>
+                            <td>${data.info.osabi}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="file-metadata">
+                    <table>
+                        <tr>
+                            <th>Entry Point:</th>
+                            <td>0x${data.info.entrypoint.toString(16)}</td>
+                        </tr>
+                        <tr>
+                            <th>ELF Version:</th>
+                            <td>${data.info.version}</td>
+                        </tr>
+                        <tr>
+                            <th>Symbols:</th>
+                            <td>${data.symbols.length}</td>
+                        </tr>
+                        <tr>
+                            <th>Sections:</th>
+                            <td>${data.sectionheaders.length}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
         </div>
         
         <div class="tab">

@@ -24,34 +24,33 @@ interface types {
     isfunction: bool,
   }
 
-  record elfinfo {
+  record fileinfo {
     machine: string,
     entrypoint: u64,
-    sectionheaders: list<sectioninfo>,
-    programheaders: list<programinfo>,
-    symbols: list<symbolinfo>,
-  }
-
-  record headerinfo {
-    isvalid: bool,
     class: string,
     endianness: string,
     osabi: string,
     filetype: string,
-    machine: string,
     version: u32,
-    headerssize: u64,
+    stripped: bool,
+  }
+
+  record elfinfo {
+    info: fileinfo,
+    sectionheaders: list<sectioninfo>,
+    programheaders: list<programinfo>,
+    symbols: list<symbolinfo>,
   }
 }
 
 interface elfparser {
-  use types.{elfinfo, headerinfo};
+  use types.{elfinfo};
  
   // Parse an ELF binary file
   parseelf: func(data: list<u8>) -> result<elfinfo, string>;
   
-  // Check if file is valid ELF and return basic header info
-  validateelf: func(data: list<u8>) -> result<headerinfo, string>;
+  // Check if file is valid ELF
+  validateelf: func(data: list<u8>) -> result<bool, string>;
 }
 
 world elfpreview {

@@ -30,43 +30,22 @@ export namespace Types {
 		isfunction: boolean;
 	};
 
-	export type Elfinfo = {
+	export type Fileinfo = {
 		machine: string;
 		entrypoint: u64;
+		class: string;
+		endianness: string;
+		osabi: string;
+		filetype: string;
+		version: u32;
+		stripped: boolean;
+	};
+
+	export type Elfinfo = {
+		info: Fileinfo;
 		sectionheaders: Sectioninfo[];
 		programheaders: Programinfo[];
 		symbols: Symbolinfo[];
-	};
-
-	export type Headerinfo = {
-		isvalid: boolean;
-		class: string;
-
-		/**
-		 * 32-bit or 64-bit
-		 */
-		endianness: string;
-
-		/**
-		 * little or big
-		 */
-		osabi: string;
-
-		/**
-		 * e.g., UNIX, Linux, etc.
-		 */
-		filetype: string;
-
-		/**
-		 * EXEC, DYN, etc.
-		 */
-		machine: string;
-
-		/**
-		 * architecture
-		 */
-		version: u32;
-		headerssize: u64;
 	};
 }
 export type Types = {
@@ -74,8 +53,6 @@ export type Types = {
 
 export namespace Elfparser {
 	export type Elfinfo = Types.Elfinfo;
-
-	export type Headerinfo = Types.Headerinfo;
 
 	/**
 	 * Parse an ELF binary file
@@ -85,11 +62,11 @@ export namespace Elfparser {
 	export type parseelf = (data: Uint8Array) => Elfinfo;
 
 	/**
-	 * Check if file is valid ELF and return basic header info
+	 * Check if file is valid ELF
 	 *
 	 * @throws $wcm.wstring.Error
 	 */
-	export type validateelf = (data: Uint8Array) => Headerinfo;
+	export type validateelf = (data: Uint8Array) => boolean;
 }
 export type Elfparser = {
 	parseelf: Elfparser.parseelf;
@@ -136,22 +113,21 @@ export namespace Types.$ {
 		['size', $wcm.u64],
 		['isfunction', $wcm.bool],
 	]);
-	export const Elfinfo = new $wcm.RecordType<Types.Elfinfo>([
+	export const Fileinfo = new $wcm.RecordType<Types.Fileinfo>([
 		['machine', $wcm.wstring],
 		['entrypoint', $wcm.u64],
-		['sectionheaders', new $wcm.ListType<Types.Sectioninfo>(Sectioninfo)],
-		['programheaders', new $wcm.ListType<Types.Programinfo>(Programinfo)],
-		['symbols', new $wcm.ListType<Types.Symbolinfo>(Symbolinfo)],
-	]);
-	export const Headerinfo = new $wcm.RecordType<Types.Headerinfo>([
-		['isvalid', $wcm.bool],
 		['class', $wcm.wstring],
 		['endianness', $wcm.wstring],
 		['osabi', $wcm.wstring],
 		['filetype', $wcm.wstring],
-		['machine', $wcm.wstring],
 		['version', $wcm.u32],
-		['headerssize', $wcm.u64],
+		['stripped', $wcm.bool],
+	]);
+	export const Elfinfo = new $wcm.RecordType<Types.Elfinfo>([
+		['info', Fileinfo],
+		['sectionheaders', new $wcm.ListType<Types.Sectioninfo>(Sectioninfo)],
+		['programheaders', new $wcm.ListType<Types.Programinfo>(Programinfo)],
+		['symbols', new $wcm.ListType<Types.Symbolinfo>(Symbolinfo)],
 	]);
 }
 export namespace Types._ {
@@ -161,8 +137,8 @@ export namespace Types._ {
 		['Sectioninfo', $.Sectioninfo],
 		['Programinfo', $.Programinfo],
 		['Symbolinfo', $.Symbolinfo],
-		['Elfinfo', $.Elfinfo],
-		['Headerinfo', $.Headerinfo]
+		['Fileinfo', $.Fileinfo],
+		['Elfinfo', $.Elfinfo]
 	]);
 	export type WasmInterface = {
 	};
@@ -170,20 +146,18 @@ export namespace Types._ {
 
 export namespace Elfparser.$ {
 	export const Elfinfo = Types.$.Elfinfo;
-	export const Headerinfo = Types.$.Headerinfo;
 	export const parseelf = new $wcm.FunctionType<Elfparser.parseelf>('parseelf', [
 		['data', new $wcm.Uint8ArrayType()],
 	], new $wcm.ResultType<Elfparser.Elfinfo, string>(Elfinfo, $wcm.wstring, $wcm.wstring.Error));
 	export const validateelf = new $wcm.FunctionType<Elfparser.validateelf>('validateelf', [
 		['data', new $wcm.Uint8ArrayType()],
-	], new $wcm.ResultType<Elfparser.Headerinfo, string>(Headerinfo, $wcm.wstring, $wcm.wstring.Error));
+	], new $wcm.ResultType<boolean, string>($wcm.bool, $wcm.wstring, $wcm.wstring.Error));
 }
 export namespace Elfparser._ {
 	export const id = 'elfpreview:parser/elfparser' as const;
 	export const witName = 'elfparser' as const;
 	export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
-		['Elfinfo', $.Elfinfo],
-		['Headerinfo', $.Headerinfo]
+		['Elfinfo', $.Elfinfo]
 	]);
 	export const functions: Map<string, $wcm.FunctionType> = new Map([
 		['parseelf', $.parseelf],
@@ -191,7 +165,7 @@ export namespace Elfparser._ {
 	]);
 	export type WasmInterface = {
 		'parseelf': (data_ptr: i32, data_len: i32, result: ptr<result<Elfinfo, string>>) => void;
-		'validateelf': (data_ptr: i32, data_len: i32, result: ptr<result<Headerinfo, string>>) => void;
+		'validateelf': (data_ptr: i32, data_len: i32, result: ptr<result<boolean, string>>) => void;
 	};
 	export namespace imports {
 		export type WasmInterface = _.WasmInterface;
@@ -228,7 +202,7 @@ export namespace elfpreview._ {
 	}
 	export type Exports = {
 		'elfpreview:parser/elfparser#parseelf': (data_ptr: i32, data_len: i32, result: ptr<result<Types.Elfinfo, string>>) => void;
-		'elfpreview:parser/elfparser#validateelf': (data_ptr: i32, data_len: i32, result: ptr<result<Types.Headerinfo, string>>) => void;
+		'elfpreview:parser/elfparser#validateelf': (data_ptr: i32, data_len: i32, result: ptr<result<boolean, string>>) => void;
 	};
 	export function bind(service: elfpreview.Imports, code: $wcm.Code, context?: $wcm.ComponentModelContext): Promise<elfpreview.Exports>;
 	export function bind(service: elfpreview.Imports.Promisified, code: $wcm.Code, port: $wcm.RAL.ConnectionPort, context?: $wcm.ComponentModelContext): Promise<elfpreview.Exports.Promisified>;
