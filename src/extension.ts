@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { elfpreview } from './elfpreview';
-import { Types } from './elfpreview';
+import { elfpreview, Types } from './elfpreview';
 import { ElfFileReader } from './fileReader';
 import { RAL, Memory, WasmContext, ResourceManagers } from '@vscode/wasm-component-model';
 
@@ -56,23 +55,31 @@ export async function activate(context: vscode.ExtensionContext) {
             'elfpreview.elfViewer',
             elfPreviewProvider,
             {
-                webviewOptions: { retainContextWhenHidden: true }
+                webviewOptions: {
+                    // reparse every time it comes into view.
+                    // This helps lower mem usage since we are fast enough to do it
+                    retainContextWhenHidden: false
+                }
             }
         )
     );
 
-    // Register the command to open an ELF file preview
-    const disposable = vscode.commands.registerCommand('elfpreview.showPreview', async () => {
-        const editor = vscode.window.activeTextEditor;
-        if (!editor) {
-            vscode.window.showInformationMessage('Open an ELF file first.');
+    // Register a custom command provider for ELF files
+    const disposable = vscode.commands.registerCommand('elfpreview.showPreview', async (fileUri?: vscode.Uri) => {
+        let uri: vscode.Uri | undefined = fileUri;
+
+        if (!uri && vscode.window.activeTextEditor) {
+            uri = vscode.window.activeTextEditor.document.uri;
+        }
+
+        if (!uri) {
+            vscode.window.showInformationMessage('No ELF file selected.');
             return;
         }
 
-        // Open the document with our custom editor
         await vscode.commands.executeCommand(
             'vscode.openWith',
-            editor.document.uri,
+            uri,
             'elfpreview.elfViewer'
         );
     });

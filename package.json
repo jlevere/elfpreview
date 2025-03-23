@@ -2,10 +2,14 @@
   "name": "elfpreview",
   "displayName": "elfPreview",
   "description": "Preview ELF binary files in VS Code",
+  "author": "https://github.com/jlevere",
   "version": "0.0.1",
-  "engines": {
-    "vscode": "^1.98.0"
-  },
+  "keywords": [
+    "VSCode",
+    "Elf",
+    "Editor",
+    "Preview"
+  ],
   "categories": [
     "Other"
   ],
@@ -13,6 +17,13 @@
     "type": "git",
     "url": "https://github.com/jlevere/elfpreview.git",
     "directory": "."
+  },
+  "bugs": {
+    "url": "https://github.com/jlevere/elfpreview/issues"
+  },
+  "homepage": "https://github.com/jlevere/elfpreview#readme",
+  "engines": {
+    "vscode": "^1.98.0"
   },
   "activationEvents": [],
   "main": "./out/extension.js",
@@ -29,7 +40,7 @@
         "displayName": "ELF Preview",
         "selector": [
           {
-            "filenamePattern": "*.{o,so,out,elf,bin,exe}"
+            "filenamePattern": "*"
           }
         ],
         "priority": "option"
@@ -39,13 +50,13 @@
       "commandPalette": [
         {
           "command": "elfpreview.showPreview",
-          "when": "resourceExtname =~ /\\.o$|\\.so$|\\.out$|\\.elf$|\\.bin$|\\.exe$/"
+          "when": "resourceScheme == 'file'"
         }
       ],
-      "editor/title": [
+      "explorer/context": [
         {
           "command": "elfpreview.showPreview",
-          "when": "resourceExtname =~ /\\.o$|\\.so$|\\.out$|\\.elf$|\\.bin$|\\.exe$/",
+          "when": "resourceScheme == 'file'",
           "group": "navigation"
         }
       ]
@@ -61,17 +72,14 @@
     "generate": "wit2ts --outDir ./src ./wit/elf-parser.wit"
   },
   "devDependencies": {
-    "@bytecodealliance/jco": "^1.10.2",
     "@types/mocha": "^10.0.10",
-    "@types/node": "20.x",
+    "@types/node": "~20.17.25",
     "@types/vscode": "^1.98.0",
-    "@typescript-eslint/eslint-plugin": "^8.26.1",
-    "@typescript-eslint/parser": "^8.26.1",
+    "@typescript-eslint/eslint-plugin": "^8.27.0",
+    "@typescript-eslint/parser": "^8.27.0",
     "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.1",
     "@vscode/wasm-component-model": "^1.0.1",
-    "@vscode/wasm-wasi": "^1.0.1",
-    "eslint": "^9.22.0",
+    "eslint": "^9.23.0",
     "typescript": "^5.7.3"
   },
   "pnpm": {
