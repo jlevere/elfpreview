@@ -26,7 +26,13 @@
     "vscode": "^1.98.0"
   },
   "activationEvents": [],
-  "main": "./out/extension.js",
+  "main": "./out/src/extension.js",
+  "capabilities": {
+    "virtualWorkspaces": true,
+    "untrustedWorkspaces": {
+      "supported": true
+    }
+  },
   "contributes": {
     "commands": [
       {
@@ -64,9 +70,10 @@
   },
   "scripts": {
     "build": "pnpm run compile:ts && pnpm run compile:rust",
-    "compile:rust": "cd rust && cargo build --target wasm32-unknown-unknown && cd ..",
+    "compile:rust": "cd rust && cargo build --release --target wasm32-unknown-unknown && cp ./target/wasm32-unknown-unknown/release/*.wasm ../out && cd ..",
     "compile:ts": "tsc -b tsconfig.json",
     "watch:ts": "tsc -b tsconfig.json -w",
+    "clean": "rimraf ./out",
     "lint": "eslint --ext .ts ts/src",
     "test": "vscode-test",
     "generate:wit": "wit2ts --outDir ./ts/src ./wit/elf-parser.wit"
@@ -80,6 +87,7 @@
     "@vscode/test-cli": "^0.0.10",
     "@vscode/wasm-component-model": "^1.0.1",
     "eslint": "^9.23.0",
+    "rimraf": "^6.0.1",
     "typescript": "^5.7.3"
   },
   "pnpm": {
