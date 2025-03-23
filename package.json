@@ -23,10 +23,11 @@
   },
   "homepage": "https://github.com/jlevere/elfpreview#readme",
   "engines": {
-    "vscode": "^1.98.0"
+    "vscode": "^1.98.0",
+    "node": "^v22.13.1"
   },
   "activationEvents": [],
-  "main": "./out/src/extension.js",
+  "main": "./dist/src/extension.js",
   "capabilities": {
     "virtualWorkspaces": true,
     "untrustedWorkspaces": {
@@ -70,10 +71,10 @@
   },
   "scripts": {
     "build": "pnpm run compile:ts && pnpm run compile:rust",
-    "compile:rust": "cd rust && cargo build --release --target wasm32-unknown-unknown && cp ./target/wasm32-unknown-unknown/release/*.wasm ../out && cd ..",
+    "compile:rust": "cd rust && cargo build --release --target wasm32-unknown-unknown && cp ./target/wasm32-unknown-unknown/release/*.wasm ../dist && cd ..",
     "compile:ts": "tsc -b tsconfig.json",
     "watch:ts": "tsc -b tsconfig.json -w",
-    "clean": "rimraf ./out",
+    "clean": "rimraf ./dist",
     "lint": "eslint --ext .ts ts/src",
     "test": "vscode-test",
     "generate:wit": "wit2ts --outDir ./ts/src ./wit/elf-parser.wit"
@@ -89,10 +90,5 @@
     "eslint": "^9.23.0",
     "rimraf": "^6.0.1",
     "typescript": "^5.7.3"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "vscode-wasi"
-    ]
   }
 }
