@@ -2,43 +2,31 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { elfpreview, Types } from './elfpreview';
 import { ElfFileReader } from './fileReader';
-import { RAL, Memory, WasmContext, ResourceManagers } from '@vscode/wasm-component-model';
-
+import { RAL, Memory, WasmContext } from '@vscode/wasm-component-model';
 
 let elfParser: elfpreview.Exports | undefined;
 
-export async function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
     console.log('ELF Preview extension is now active!');
 
     // Load and initialize the WebAssembly module
     try {
         // Get the path to the WebAssembly file
-        const wasmPath = vscode.Uri.file(path.join(context.extensionPath, 'target/wasm32-unknown-unknown/release/', 'elfpreview.wasm'));
+        const wasmPath = vscode.Uri.file(path.join(context.extensionPath, './out', 'elfpreview.wasm'));
 
         // Load the WebAssembly module
-        const wasmBytes = await vscode.workspace.fs.readFile(wasmPath);
-        const wasmModule = await WebAssembly.compile(wasmBytes);
+        const bits = await vscode.workspace.fs.readFile(wasmPath);
+        const module = await WebAssembly.compile(bits);
 
         // Create a memory and context for the WebAssembly module
-        let memory: Memory | undefined;
-        const wasmContext: WasmContext = {
-            options: { encoding: 'utf-8' },
-            resources: new ResourceManagers.Default(),
-            getMemory: () => {
-                if (memory === undefined) {
-                    throw new Error('Memory not yet initialized');
-                }
-                return memory;
-            }
-        };
+        let wasmContext: WasmContext.Default = new WasmContext.Default();
 
         // Create the imports object (empty in this case as we don't have any imports)
         const imports = elfpreview._.imports.create({}, wasmContext);
 
         // Instantiate the WebAssembly module
-        const instance = await RAL().WebAssembly.instantiate(wasmModule, imports);
-        memory = new Memory.Default(instance.exports);
-
+        const instance = await RAL().WebAssembly.instantiate(module, imports);
+        wasmContext.initialize(new Memory.Default(instance.exports));
         // Bind the exports to our interface
         elfParser = elfpreview._.exports.bind(instance.exports as elfpreview._.Exports, wasmContext);
 
