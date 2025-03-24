@@ -12,7 +12,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     // Load and initialize the WebAssembly module
     try {
         // Get the path to the WebAssembly file
-        const wasmPath = vscode.Uri.file(path.join(context.extensionPath, './out', 'elfpreview.wasm'));
+        const wasmPath = vscode.Uri.file(path.join(context.extensionPath, './dist', 'elfpreview.wasm'));
 
         // Load the WebAssembly module
         const bits = await vscode.workspace.fs.readFile(wasmPath);

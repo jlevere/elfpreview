@@ -8,8 +8,8 @@
 		],
 		"sourceMap": true,
 		"rootDir": ".",
-		"outDir": "../out",
-		"tsBuildInfoFile": "../out/compile.tsbuildInfo",
+		"outDir": "../dist",
+		"tsBuildInfoFile": "../dist/compile.tsbuildInfo",
 		"strict": true, /* enable all strict type-checking options */
 	},
 	"include": [
