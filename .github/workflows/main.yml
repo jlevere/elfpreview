@@ -24,6 +24,6 @@ jobs:
           cache: ${{ secrets.ATTIC_CACHE }}
           token: ${{ secrets.ATTIC_TOKEN }}
 
-      - run: pnpm install
-      - run: pnpm run build
-      - run: pnpm run lint
+      - run: nix develop .#build --command pnpm install
+      - run: nix develop .#build --command pnpm run build
+      - run: nix develop .#build --command pnpm run lint

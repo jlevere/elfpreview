@@ -40,6 +40,16 @@
             rust
           ];
         };
+
+        build = pkgs.mkShell {
+          buildInputs = with pkgs; [
+            nodejs
+            nodePackages.pnpm
+            wasm-tools
+            llvmPackages.bintools
+            rust
+          ];
+        };
       };
     });
 }
