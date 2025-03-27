@@ -69,7 +69,7 @@ fn build_file_info(elf: &Elf) -> elfpreview::parser::types::Fileinfo {
             },
             _ => format!("Unknown ({})", elf.header.e_ident[header::EI_DATA]),
         },
-        osabi: machine_to_str(elf.header.e_ident[header::EI_OSABI].into()).to_string(),
+        osabi: machine_to_str(elf.header.e_ident[header::EI_OSABI] as i32).to_string(),
         filetype: header::et_to_str(elf.header.e_type).to_string(),
         version: elf.header.e_version,
         stripped: is_stripped,

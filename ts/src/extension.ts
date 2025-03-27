@@ -120,7 +120,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
                 filename,
             );
         } catch (error) {
-            webviewPanel.webview.html = `<html><body>
+            webviewPanel.webview.html = /*html*/  `<html><body>
                 <div style="color: red; padding: 20px;">
                     <h1>Error parsing ELF file</h1>
                     <pre>${error}</pre>
@@ -133,7 +133,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
     // TODO: breakout into tsx/jsx stuff
     private getHtmlForWebview(data: Types.Elfinfo, filename: string): string {
         try {
-            return `<!DOCTYPE html>
+            return /*html*/ `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
