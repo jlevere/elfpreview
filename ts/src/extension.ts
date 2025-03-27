@@ -19,7 +19,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const module = await WebAssembly.compile(bits);
 
         // Create a memory and context for the WebAssembly module
-        let wasmContext: WasmContext.Default = new WasmContext.Default();
+        const wasmContext: WasmContext.Default = new WasmContext.Default();
 
         // Create the imports object (empty in this case as we don't have any imports)
         const imports = elfpreview._.imports.create({}, wasmContext);
