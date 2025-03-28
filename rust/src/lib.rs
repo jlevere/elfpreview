@@ -5,7 +5,7 @@ wit_bindgen::generate!({
 
 use crate::exports::elfpreview::parser::elfparser::Guest;
 use goblin::elf::*;
-use scroll;
+use scroll::{Endian, Pread};
 
 struct ElfParser;
 
@@ -39,9 +39,55 @@ impl Guest for ElfParser {
 
         Ok(true)
     }
+
+    fn quickparseelf(data: Vec<u8>) -> Result<elfpreview::parser::types::Fileinfo, String> {
+        quick_parse_elf_header(&data)
+    }
 }
 
 export!(ElfParser);
+
+fn quick_parse_elf_header(data: &[u8]) -> Result<elfpreview::parser::types::Fileinfo, String> {
+    if data.len() < std::mem::size_of::<header::header64::Header>() {
+        return Err("File too small to be an ELF".to_string());
+    }
+
+    if &data[0..4] != b"\x7FELF" {
+        return Err("Invalid ELF magic number".to_string());
+    }
+
+    let class = header::class_to_str(data[4]).to_string();
+    let endianness = match data[5] {
+        1 => "Little Endian".to_string(),
+        2 => "Big Endian".to_string(),
+        _ => format!("Unknown ({})", data[5]),
+    };
+    let osabi = osabi_to_str(data[7] as i32).to_string();
+
+    let machine = match data.pread_with::<u16>(18, Endian::Little) {
+        Ok(machine_type) => header::machine_to_str(machine_type).to_string(),
+        Err(_) => "Unknown".to_string(),
+    };
+
+    let file_type = match data.pread_with::<u16>(16, Endian::Little) {
+        Ok(e_type) => header::et_to_str(e_type).to_string(),
+        Err(_) => "Unknown".to_string(),
+    };
+
+    let entry_point = data.pread_with::<u64>(24, Endian::Little).unwrap_or(0);
+    let version = data.pread_with::<u32>(20, Endian::Little).unwrap_or(0);
+
+    Ok(elfpreview::parser::types::Fileinfo {
+        machine,
+        entrypoint: entry_point,
+        class,
+        endianness,
+        osabi,
+        filetype: file_type,
+        version,
+        stripped: false, // This is unfortunate, but we need symbols for this, so always false
+    })
+}
 
 fn build_file_info(elf: &Elf) -> elfpreview::parser::types::Fileinfo {
     let is_stripped = elf
@@ -64,8 +110,8 @@ fn build_file_info(elf: &Elf) -> elfpreview::parser::types::Fileinfo {
 
         endianness: match elf.header.endianness() {
             Ok(f) => match f {
-                scroll::Endian::Big => "Big Endian".to_string(),
-                scroll::Endian::Little => "Little Endian".to_string(),
+                Endian::Big => "Big Endian".to_string(),
+                Endian::Little => "Little Endian".to_string(),
             },
             _ => format!("Unknown ({})", elf.header.e_ident[header::EI_DATA]),
         },
@@ -347,6 +393,36 @@ mod tests {
         let test_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
         let filepath = test_dir.join(filename);
         fs::read(filepath).expect("Failed to read test ELF file")
+    }
+
+    #[test]
+    fn test_quick_parse_simple_elf() {
+        let elf_data = load_test_elf("go-away");
+        let result = ElfParser::quickparseelf(elf_data);
+
+        assert!(
+            result.is_ok(),
+            "Failed to quick parse ELF: {:?}",
+            result.err()
+        );
+
+        let file_info = result.unwrap();
+
+        assert!(
+            !file_info.machine.is_empty(),
+            "Machine type should not be empty"
+        );
+        assert!(file_info.entrypoint != 0, "Entry point should be non-zero");
+        assert!(!file_info.class.is_empty(), "ELF class should not be empty");
+        assert!(
+            !file_info.endianness.is_empty(),
+            "Endianness should not be empty"
+        );
+        assert!(!file_info.osabi.is_empty(), "OS ABI should not be empty");
+        assert!(
+            !file_info.filetype.is_empty(),
+            "File type should not be empty"
+        );
     }
 
     #[test]

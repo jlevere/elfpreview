@@ -44,13 +44,16 @@ interface types {
 }
 
 interface elfparser {
-  use types.{elfinfo};
+  use types.{elfinfo, fileinfo};
  
   // Parse an ELF binary file
   parseelf: func(data: list<u8>) -> result<elfinfo, string>;
   
   // Check if file is valid ELF
   validateelf: func(data: list<u8>) -> result<bool, string>;
+
+  // Parse just the header
+  quickparseelf: func(data: list<u8>) -> result<fileinfo, string>;
 }
 
 world elfpreview {
