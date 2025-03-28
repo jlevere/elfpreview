@@ -1,0 +1,8 @@
+rust/tests/fixtures/* binary
+ts/src/elfpreview.ts generated
+
+# locks
+package-lock.json generated
+pnpm-lock.yaml generated
+rust/Cargo.lock generated
+flake.lock generated
