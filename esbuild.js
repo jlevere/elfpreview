@@ -1,10 +1,10 @@
 const esbuild = require('esbuild');
-
+const sveltePlugin = require('esbuild-svelte');
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
 
 async function main() {
-    const ctx = await esbuild.context({
+    const extensionConfig = {
         entryPoints: ['ts/src/extension.ts'],
         bundle: true,
         format: 'cjs',
@@ -15,25 +15,50 @@ async function main() {
         outfile: 'dist/extension.js',
         external: ['vscode'],
         logLevel: 'warning',
+    };
+
+    const webviewConfig = {
+        entryPoints: ['webview/src/main.ts'],
+        bundle: true,
+        format: 'esm',
+        minify: production,
+        sourcemap: !production,
+        sourcesContent: false,
+        platform: 'browser',
+        target: ['es2020'],
+        outfile: 'dist/webview.js',
         plugins: [
-            /* add to the end of plugins array */
-            esbuildProblemMatcherPlugin
+            sveltePlugin({
+                compilerOptions: {
+                    dev: !production,
+                }
+            })
+        ],
+    };
+
+    const ctx = await esbuild.context({
+        ...extensionConfig,
+        plugins: [
+            esbuildProblemMatcherPlugin,
         ]
     });
+
+    const webviewCtx = await esbuild.context(webviewConfig);
+
     if (watch) {
         await ctx.watch();
+        await webviewCtx.watch();
     } else {
         await ctx.rebuild();
+        await webviewCtx.rebuild();
         await ctx.dispose();
+        await webviewCtx.dispose();
     }
 }
 
-/**
- * @type {import('esbuild').Plugin}
- */
+/** @type {import('esbuild').Plugin} */
 const esbuildProblemMatcherPlugin = {
     name: 'esbuild-problem-matcher',
-
     setup(build) {
         build.onStart(() => {
             console.log('[watch] build started');

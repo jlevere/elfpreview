@@ -99,6 +99,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
             }
 
             const fileReader = new ElfFileReader(document.uri);
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars 
             const filename = document.uri.path.split('/').pop() || "Unknown ELF File";
 
 
@@ -111,14 +112,33 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
 
             const elfData = await vscode.workspace.fs.readFile(document.uri);
 
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars 
             const parsedData = elfParser.elfparser.parseelf(elfData);
 
 
-            // Set up the webview HTML
-            webviewPanel.webview.html = this.getHtmlForWebview(
-                parsedData,
-                filename,
-            );
+            // // Set up the webview HTML
+            // webviewPanel.webview.html = this.getHtmlForWebview(
+            //     parsedData,
+            //     filename,
+            // );
+
+            const webviewScriptUri = webviewPanel.webview.asWebviewUri(vscode.Uri.joinPath(
+                this.extensionUri,
+                'dist',
+                'webview.js'
+            ));
+
+            const webviewStyleUri = webviewPanel.webview.asWebviewUri(vscode.Uri.joinPath(
+                this.extensionUri,
+                'dist',
+                'webview.css'
+            ));
+
+
+            // Generate HTML with the correct script source
+            webviewPanel.webview.html = this.newgetHtmlForWebview(webviewPanel.webview, webviewStyleUri.toString(), webviewScriptUri.toString(), getNonce());
+
+
         } catch (error) {
             webviewPanel.webview.html = /*html*/  `<html><body>
                 <div style="color: red; padding: 20px;">
@@ -127,6 +147,28 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
                 </div>
             </body></html>`; // TODO: break this out into jsx stuff
         }
+    }
+
+    private newgetHtmlForWebview(webview: vscode.Webview, styleUri: string, scriptUri: string, nonce: string): string {
+
+        return /*html*/ `
+        <!DOCTYPE html>
+        <html lang="en">
+        <html>
+          <head>
+            <meta charset="UTF-8">
+            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource}; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
+
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <link href="${styleUri}" rel="stylesheet" />
+            <title>ELF Preview</title>
+          </head>
+          <body>
+            <div id="app"></div>
+            <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
+          </body>
+        </html>
+      `;
     }
 
 
@@ -419,6 +461,15 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
             </body></html>`;
         }
     }
+}
+
+function getNonce() {
+    let text = '';
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    for (let i = 0; i < 32; i++) {
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+    return text;
 }
 
 export function deactivate() { }
