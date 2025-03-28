@@ -42,11 +42,8 @@ This extension contributes the following settings:
 Initial release
 
 
----
+## Tests
 
-## Following extension guidelines
+There are tests for the rust code located in the [lib.rs](./rust/src/lib.rs) file it self.  The utilize a few test files in the [fixtures](./rust/tests/fixtures/) directory.  Some of these test binaries were taken from [https://github.com/tmpout/elfs](https://github.com/tmpout/elfs), primarily made by [@netspooky](https://x.com/netspooky)
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
+Some have strange architectures, some lots of headers, etc.  The one that actually gave pause was a simple rust program compiled with symbols in a nix enviroment.  Turns out it has several hundered symbols with massively long names which is a struggle to push through the ts wasm boundary and also just to display cleanly.

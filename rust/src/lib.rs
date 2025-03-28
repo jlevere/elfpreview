@@ -69,7 +69,7 @@ fn build_file_info(elf: &Elf) -> elfpreview::parser::types::Fileinfo {
             },
             _ => format!("Unknown ({})", elf.header.e_ident[header::EI_DATA]),
         },
-        osabi: machine_to_str(elf.header.e_ident[header::EI_OSABI] as i32).to_string(),
+        osabi: osabi_to_str(elf.header.e_ident[header::EI_OSABI] as i32).to_string(),
         filetype: header::et_to_str(elf.header.e_type).to_string(),
         version: elf.header.e_version,
         stripped: is_stripped,
@@ -140,10 +140,9 @@ fn build_sym_info(elf: &Elf) -> Vec<elfpreview::parser::types::Symbolinfo> {
         .collect();
 }
 
-fn machine_to_str(machine: i32) -> &'static str {
-    match machine {
-        //TODO: conver to toml macro
-        0 => "no machine",
+fn osabi_to_str(osabi: i32) -> &'static str {
+    match osabi {
+        0 => "UNIX - System V",
         1 => "AT&T WE 32100",
         2 => "SPARC",
         3 => "x86",
@@ -333,6 +332,100 @@ fn machine_to_str(machine: i32) -> &'static str {
         257 => "WDC 65C816",
         258 => "LoongArch",
         259 => "ChipON KungFu32",
-        _ => "Unknown Machine",
+        _ => "Unknown OSABI",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::path::Path;
+
+    // Helper function to load test ELF files
+    fn load_test_elf(filename: &str) -> Vec<u8> {
+        let test_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+        let filepath = test_dir.join(filename);
+        fs::read(filepath).expect("Failed to read test ELF file")
+    }
+
+    #[test]
+    fn test_validate_elf_invalid() {
+        // Test invalid magic number
+        let text_data = load_test_elf("../../src/lib.rs");
+        assert!(ElfParser::validateelf(text_data).is_err());
+
+        // Test too short file
+        let too_short = vec![0x7F, 0x45, 0x4C];
+        assert!(ElfParser::validateelf(too_short).is_err());
+    }
+
+    #[test]
+    fn test_parse_simple_elf() {
+        let elf_data = load_test_elf("simple_test2");
+
+        let result = ElfParser::parseelf(elf_data);
+        assert!(result.is_ok(), "Failed to parse ELF: {:?}", result.err());
+
+        let elf_info = result.unwrap();
+
+        assert!(
+            elf_info.sectionheaders.len() > 0,
+            "Should have section headers"
+        );
+        assert!(
+            elf_info.programheaders.len() > 0,
+            "Should have program headers"
+        );
+        assert!(elf_info.symbols.len() > 0, "Should have symbols");
+    }
+
+    #[test]
+    fn test_osabi_to_str() {
+        assert!(
+            osabi_to_str(10) == "MIPS RS3000",
+            "should have been MIPS RS3000"
+        );
+    }
+
+    #[test]
+    fn test_simple_file_info_extraction() {
+        let elf_data = load_test_elf("simple_test");
+
+        let result = ElfParser::parseelf(elf_data);
+        assert!(result.is_ok());
+
+        let elf_info = result.unwrap();
+
+        // Check basic file info properties
+        assert!(elf_info.info.osabi == "UNIX - System V");
+        assert!(elf_info.info.entrypoint == 0x23d0);
+    }
+
+    #[test]
+    fn test_s390_file_info_extraction() {
+        let elf_data = load_test_elf("go-away");
+
+        let result = ElfParser::parseelf(elf_data);
+        assert!(result.is_ok());
+
+        let elf_info = result.unwrap();
+
+        // Check basic file info properties
+        assert!(elf_info.info.machine == "S390");
+        assert!(elf_info.info.entrypoint == 0x78ee0);
+    }
+
+    #[test]
+    fn test_bigphdr_file_info_extraction() {
+        let elf_data = load_test_elf("phdr.73prg.bin");
+
+        let result = ElfParser::parseelf(elf_data);
+        assert!(result.is_ok());
+
+        let elf_info = result.unwrap();
+
+        // Check basic file info properties
+        assert!(elf_info.programheaders.len() == 73);
     }
 }
