@@ -7,8 +7,8 @@ import svelte from "eslint-plugin-svelte";
 
 export default defineConfig([
   eslint.configs.recommended,
-  ts.configs.recommendedTypeChecked,
-  svelte.configs["flat/recommended"],
+  ...ts.configs.recommendedTypeChecked,
+  ...svelte.configs["flat/recommended"],
   {
     languageOptions: {
       parserOptions: {
