@@ -56,13 +56,13 @@ fn quick_parse_elf_header(data: &[u8]) -> Result<elfpreview::parser::types::File
         return Err("Invalid ELF magic number".to_string());
     }
 
-    let class = header::class_to_str(data[4]).to_string();
-    let endianness = match data[5] {
+    let class = header::class_to_str(data[header::EI_CLASS]).to_string();
+    let endianness = match data[header::EI_CLASS] {
         1 => "Little Endian".to_string(),
         2 => "Big Endian".to_string(),
-        _ => format!("Unknown ({})", data[5]),
+        _ => format!("Unknown ({})", data[header::EI_CLASS]),
     };
-    let osabi = osabi_to_str(data[7] as i32).to_string();
+    let osabi = osabi_to_str(data[header::EI_OSABI] as i32).to_string();
 
     let machine = match data.pread_with::<u16>(18, Endian::Little) {
         Ok(machine_type) => header::machine_to_str(machine_type).to_string(),
