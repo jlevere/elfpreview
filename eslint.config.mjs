@@ -8,6 +8,7 @@ import svelte from "eslint-plugin-svelte";
 export default defineConfig([
   eslint.configs.recommended,
   ts.configs.recommendedTypeChecked,
+  svelte.configs["flat/recommended"],
   {
     languageOptions: {
       parserOptions: {
@@ -19,12 +20,6 @@ export default defineConfig([
         ...globals.node
       }
     }
-  },
-
-  {
-    files: ["**/*.svelte"],
-    plugins: { svelte },
-    extends: ["svelte/recommended"]
   },
   {
     ignores: [
