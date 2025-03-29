@@ -1,24 +1,34 @@
 import { defineConfig } from "eslint/config";
 import globals from "globals";
-import js from "@eslint/js";
-import tseslint from "typescript-eslint";
+import eslint from "@eslint/js";
+import ts from "typescript-eslint";
+import svelte from "eslint-plugin-svelte";
 
 
 export default defineConfig([
+  eslint.configs.recommended,
+  ts.configs.recommendedTypeChecked,
+  {
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+      globals: {
+        ...globals.browser,
+        ...globals.node
+      }
+    }
+  },
+
+  {
+    files: ["**/*.svelte"],
+    plugins: { svelte },
+    extends: ["svelte/recommended"]
+  },
   {
     ignores: [
       "**/elfpreview.ts",
     ]
-  },
-  {
-    files: ["**/*.{js,mjs,cjs,ts}"],
-    languageOptions: {
-      globals: {
-        ...globals.browser,
-        ...globals.node
-      },
-    }
-  },
-  { files: ["**/*.{js,mjs,cjs,ts}"], plugins: { js }, extends: ["js/recommended"] },
-  tseslint.configs.recommended,
+  }
 ]);
