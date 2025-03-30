@@ -1,9 +1,9 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import type { Types } from "../../ts/src/elfpreview";
+    import { onMount } from 'svelte';
+    import type { Types } from '../../ts/src/elfpreview';
     import { VirtualList } from 'svelte-virtuallists';
 
-    let { initialData }: {initialData: {
+    const { initialData }: {initialData: {
         filename?: string;
         fileinfo?: Types.Fileinfo;
     }} = $props();
@@ -15,8 +15,8 @@
     type Fileinfo = Types.Fileinfo;
 
     // hydrated props
-    let filename = initialData.filename || "Unknown ELF File";
-    let fileInfo = $state<Fileinfo | null>(initialData?.fileinfo || null);
+    const filename = initialData.filename || 'Unknown ELF File';
+    const fileInfo = $state<Fileinfo | null>(initialData?.fileinfo || null);
 
     // Rest of component state
     let sectionHeaders = $state<Sectioninfo[]>([]);
@@ -25,24 +25,19 @@
     let sectionsLoaded = $state(false);
     let programsLoaded = $state(false);
     let symbolsLoaded = $state(false);
-    let error = $state<string | null>(null);
     let stripped = $state('');
-    let loadState = $state('loading');
-    
 
     // Message types for staged loading
     type MessageType = 
-        | "strip-info"
-        | "section-info" 
-        | "program-info" 
-        | "symbol-info" 
-        | "parse-complete" 
-        | "request-elf-info" 
-        | "error";
+        | 'strip-info'
+        | 'section-info' 
+        | 'program-info' 
+        | 'symbol-info' 
+        | 'request-elf-info';
     
     type Payload = {
         type: MessageType;
-        data?: any;
+        data?: Sectioninfo[] | Programinfo[] | Symbolinfo[] | string;
         error?: string;
     };
 
@@ -51,46 +46,34 @@
         const message = event.data;
         
         switch (message.type) {
-            case "strip-info":
-                stripped = message.data || '';
+            case 'strip-info':
+                stripped = message.data as string || '';
                 break;
 
-            case "section-info":
-                sectionHeaders = message.data || [];
+            case 'section-info':
+                sectionHeaders = message.data as Sectioninfo[] || [];
                 sectionsLoaded = true;
-                loadState = 'sections-loaded';
                 break;
                 
-            case "program-info":
-                programHeaders = message.data || [];
+            case 'program-info':
+                programHeaders = message.data as Programinfo[] || [];
                 programsLoaded = true;
-                loadState = 'programs-loaded';
                 break;
                 
-            case "symbol-info":
-                symbols = message.data || [];
+            case 'symbol-info':
+                symbols = message.data as Symbolinfo[] || [];
                 symbolsLoaded = true;
-                loadState = 'symbols-loaded';
-                break;
-                
-            case "parse-complete":
-                loadState = 'complete';
-                break;
-                
-            case "error":
-                error = message.error || "Unknown error";
-                loadState = 'error';
                 break;
         }
     }
 
     onMount(() => {
         // Setup message listener
-        window.addEventListener("message", handleMessage);
+        window.addEventListener('message', handleMessage);
         
         // Cleanup listener on unmount
         return () => {
-            window.removeEventListener("message", handleMessage);
+            window.removeEventListener('message', handleMessage);
         };
     });
 
@@ -99,7 +82,7 @@
      // Symbol filter state
      let symbolFilter = $state('');
     
-     let filteredSymbols = $derived(symbols.filter(symbol => 
+     const filteredSymbols = $derived(symbols.filter(symbol => 
         symbol.name.toLowerCase().includes(symbolFilter.toLowerCase())
     ));
     
@@ -169,7 +152,7 @@
                     <div class="size-col">Size</div>
                 </div>
                 <VirtualList items={sectionHeaders} style="height: 350px; width: 100%;">
-                    {#snippet vl_slot({ item, index })}
+                    {#snippet vl_slot({ item }: { item: Sectioninfo })}
                         <div class="table-row">
                             <div class="name-col">{item.name}</div>
                             <div class="type-col">{item.typename}</div>
@@ -199,7 +182,7 @@
                     <div class="memsz-col">Mem Size</div>
                 </div>
                 <VirtualList items={programHeaders} style="height: 350px; width: 100%;">
-                    {#snippet vl_slot({ item, index })}
+                    {#snippet vl_slot({ item }: { item: Programinfo})}
                         <div class="table-row">
                             <div class="type-col">{item.typename}</div>
                             <div class="flags-col">{item.flagstring}</div>
@@ -233,7 +216,7 @@
                     <div class="type-col">Is Function</div>
                 </div>
                 <VirtualList items={filteredSymbols} style="height: 350px; width: 100%;">
-                    {#snippet vl_slot({ item, index })}
+                    {#snippet vl_slot({ item }: { item: Symbolinfo})}
                         <div class="table-row">
                             <div class="name-col" role="tooltip" title={item.name}>{item.name}</div>
                             <div class="value-col">0x{item.value}</div>
