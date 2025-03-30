@@ -1,8 +1,8 @@
-import * as vscode from "vscode";
-import * as path from "path";
-import { elfpreview, type Types } from "./elfpreview";
-import { ElfFileReader } from "./fileReader";
-import { RAL, Memory, WasmContext } from "@vscode/wasm-component-model";
+import * as vscode from 'vscode';
+import * as path from 'node:path';
+import { elfpreview, type Types } from './elfpreview';
+import { ElfFileReader } from './fileReader';
+import { RAL, Memory, WasmContext } from '@vscode/wasm-component-model';
 
 class ElfPreviewExtension {
     private elfParser?: elfpreview.Exports;
@@ -13,7 +13,7 @@ class ElfPreviewExtension {
     }
 
     async activate(): Promise<void> {
-        console.log("ELF Preview extension is now active!");
+        console.log('ELF Preview extension is now active!');
 
         try {
             await this.initializeElfParser();
@@ -28,7 +28,7 @@ class ElfPreviewExtension {
 
     private async initializeElfParser(): Promise<void> {
         const wasmPath = vscode.Uri.file(
-            path.join(this.context.extensionPath, "./dist", "elfpreview.wasm"),
+            path.join(this.context.extensionPath, './dist', 'elfpreview.wasm'),
         );
 
         try {
@@ -49,9 +49,9 @@ class ElfPreviewExtension {
                 wasmContext,
             );
 
-            console.log("ELF Parser WebAssembly module loaded successfully");
+            console.log('ELF Parser WebAssembly module loaded successfully');
         } catch (error) {
-            console.error("Failed to load WebAssembly module:", error);
+            console.error('Failed to load WebAssembly module:', error);
             throw error;
         }
     }
@@ -64,7 +64,7 @@ class ElfPreviewExtension {
 
         this.context.subscriptions.push(
             vscode.window.registerCustomEditorProvider(
-                "elfpreview.elfViewer",
+                'elfpreview.elfViewer',
                 elfPreviewProvider,
                 {
                     webviewOptions: {
@@ -79,21 +79,21 @@ class ElfPreviewExtension {
 
     private registerElfPreviewCommand(): void {
         const disposable = vscode.commands.registerCommand(
-            "elfpreview.showPreview",
+            'elfpreview.showPreview',
             async (fileUri?: vscode.Uri) => {
                 const uri = fileUri || this.getCurrentFileUri();
 
                 if (!uri) {
                     vscode.window.showInformationMessage(
-                        "No ELF file selected.",
+                        'No ELF file selected.',
                     );
                     return;
                 }
 
                 await vscode.commands.executeCommand(
-                    "vscode.openWith",
+                    'vscode.openWith',
                     uri,
-                    "elfpreview.elfViewer",
+                    'elfpreview.elfViewer',
                 );
             },
         );
@@ -109,12 +109,12 @@ class ElfPreviewExtension {
         const errorMessage =
             error instanceof Error
                 ? error.message
-                : "Unknown initialization error";
+                : 'Unknown initialization error';
 
         vscode.window.showErrorMessage(
             `Failed to load ELF Preview: ${errorMessage}`,
         );
-        console.error("ELF Preview initialization failed:", error);
+        console.error('ELF Preview initialization failed:', error);
     }
 }
 
@@ -163,7 +163,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
     }
     private validateElfParser(): void {
         if (!this.elfParser) {
-            throw new Error("ELF Parser not initialized");
+            throw new Error('ELF Parser not initialized');
         }
     }
 
@@ -173,13 +173,13 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
         fileinfo: Types.Fileinfo,
     ): void {
         const webviewScriptUri = this.getWebviewUri(webviewPanel.webview, [
-            "dist",
-            "webview.js",
+            'dist',
+            'webview.js',
         ]);
 
         const webviewStyleUri = this.getWebviewUri(webviewPanel.webview, [
-            "dist",
-            "webview.css",
+            'dist',
+            'webview.css',
         ]);
 
         webviewPanel.webview.html = this.generateWebviewHtml(
@@ -202,7 +202,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
             // quick update stripped tag
             if (parsedData.info) {
                 webviewPanel.webview.postMessage({
-                    type: "strip-info",
+                    type: 'strip-info',
                     data: this.replaceBigInts(String(parsedData.info.stripped)),
                 });
             }
@@ -210,7 +210,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
             // Send section headers first (relatively small)
             if (parsedData.sectionheaders) {
                 webviewPanel.webview.postMessage({
-                    type: "section-info",
+                    type: 'section-info',
                     data: this.replaceBigInts(parsedData.sectionheaders),
                 });
             }
@@ -221,7 +221,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
             // Send program headers next (also relatively small)
             if (parsedData.programheaders) {
                 webviewPanel.webview.postMessage({
-                    type: "program-info",
+                    type: 'program-info',
                     data: this.replaceBigInts(parsedData.programheaders),
                 });
             }
@@ -232,24 +232,24 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
             // Send symbols last (potentially very large)
             if (parsedData.symbols) {
                 webviewPanel.webview.postMessage({
-                    type: "symbol-info",
+                    type: 'symbol-info',
                     data: this.replaceBigInts(parsedData.symbols),
                 });
             }
 
             // Send a completion message
             webviewPanel.webview.postMessage({
-                type: "parse-complete",
-                data: { loadState: "complete" },
+                type: 'parse-complete',
+                data: { loadState: 'complete' },
             });
         } catch (error) {
-            console.error("Error during async parsing:", error);
+            console.error('Error during async parsing:', error);
             webviewPanel.webview.postMessage({
-                type: "error",
+                type: 'error',
                 error:
                     error instanceof Error
                         ? error.message
-                        : "Unknown parsing error",
+                        : 'Unknown parsing error',
             });
         }
     }
@@ -274,15 +274,17 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
 
         // hydate with minimal info
         const initialData = {
-            filename: filename,
-            fileinfo: fileinfo,
+            filename,
+            fileinfo,
         };
 
+        /* eslint-disable @typescript-eslint/no-unsafe-return */
         const initialDataScript = /*html*/ `
         <script nonce="${nonce}">
-          window.__INITIAL_DATA__ = ${JSON.stringify(initialData, (_, v) => (typeof v === "bigint" ? v.toString(16) : v))};
+          window.__INITIAL_DATA__ = ${JSON.stringify(initialData, (_, v) => (typeof v === 'bigint' ? v.toString(16) : v))};
         </script>
       `;
+        /* eslint-enable @typescript-eslint/no-unsafe-return */ //TODO: fix this bigint stuff.  its complicated.
 
         return /*html*/ `
           <!DOCTYPE html>
@@ -295,13 +297,13 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
                 style-src ${webview.cspSource}; 
                 script-src 'nonce-${nonce}';">
               <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <link href="${styleUri}" rel="stylesheet" />
+              <link href="${styleUri.toString()}" rel="stylesheet" />
               <title>ELF Preview</title>
             </head>
             <body>
               <div id="app"></div>
               ${initialDataScript}
-              <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
+              <script type="module" nonce="${nonce}" src="${scriptUri.toString()}"></script>
             </body>
           </html>
         `;
@@ -309,7 +311,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
 
     private getQuickFileInfo(elfData: Uint8Array): Types.Fileinfo {
         if (!this.elfParser) {
-            throw new Error("ELF Parser not initialized");
+            throw new Error('ELF Parser not initialized');
         }
         return this.elfParser.elfparser.quickparseelf(elfData);
     }
@@ -318,7 +320,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
         elfData: Uint8Array,
     ): Promise<Types.Elfinfo> {
         if (!this.elfParser) {
-            return Promise.reject(new Error("ELF Parser not initialized"));
+            return Promise.reject(new Error('ELF Parser not initialized'));
         }
 
         return Promise.resolve().then(() => {
@@ -328,20 +330,20 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
             } catch (error) {
                 throw error instanceof Error
                     ? error
-                    : new Error("An unexpected error occurred");
+                    : new Error('An unexpected error occurred');
             }
         });
     }
 
     private extractFilename(uri: vscode.Uri): string {
-        return uri.path.split("/").pop() || "Unknown ELF File";
+        return uri.path.split('/').pop() || 'Unknown ELF File';
     }
 
     private async validateElfFile(fileReader: ElfFileReader): Promise<void> {
         const headerData = await fileReader.readChunk(0, 64);
 
         if (!this.elfParser?.elfparser.validateelf(headerData)) {
-            throw new Error("File is not recognized as an ELF");
+            throw new Error('File is not recognized as an ELF');
         }
     }
 
@@ -352,7 +354,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
         const errorMessage =
             error instanceof Error
                 ? error.message
-                : "Unknown error parsing ELF file";
+                : 'Unknown error parsing ELF file';
 
         webviewPanel.webview.html = /*html*/ `
           <html>
@@ -368,18 +370,18 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
 
     private getNonce(): string {
         const chars =
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
         return Array.from(crypto.getRandomValues(new Uint8Array(32)))
             .map((n) => chars[n % chars.length])
-            .join("");
+            .join('');
     }
 
     private replaceBigInts = (obj: unknown): unknown => {
-        if (typeof obj === "bigint") {
+        if (typeof obj === 'bigint') {
             return obj.toString(16);
         } else if (Array.isArray(obj)) {
             return obj.map(this.replaceBigInts);
-        } else if (obj && typeof obj === "object") {
+        } else if (obj && typeof obj === 'object') {
             const result: { [key: string]: unknown } = {};
             for (const key in obj) {
                 if (Object.prototype.hasOwnProperty.call(obj, key)) {
