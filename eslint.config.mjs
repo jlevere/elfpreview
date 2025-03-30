@@ -2,13 +2,13 @@ import { defineConfig } from "eslint/config";
 import globals from "globals";
 import eslint from "@eslint/js";
 import ts from "typescript-eslint";
-import svelte from "eslint-plugin-svelte";
+import svelteConfig from '@sveltejs/eslint-config';
 
 
 export default defineConfig([
   eslint.configs.recommended,
   ...ts.configs.recommendedTypeChecked,
-  ...svelte.configs["flat/recommended"],
+  ...svelteConfig,
   {
     languageOptions: {
       parserOptions: {
@@ -23,7 +23,7 @@ export default defineConfig([
   },
   {
     ignores: [
-      "**/elfpreview.ts",
+      "**/elfpreview.ts"
     ]
   }
 ]);

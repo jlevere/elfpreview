@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import type { Types } from "../../ts/src/elfpreview";
+    import { VirtualList } from 'svelte-virtuallists';
 
     let { initialData }: {initialData: {
         filename?: string;
@@ -52,6 +53,8 @@
         switch (message.type) {
             case "strip-info":
                 stripped = message.data || '';
+                break;
+
             case "section-info":
                 sectionHeaders = message.data || [];
                 sectionsLoaded = true;
@@ -96,13 +99,17 @@
      // Symbol filter state
      let symbolFilter = $state('');
     
+     let filteredSymbols = $derived(symbols.filter(symbol => 
+        symbol.name.toLowerCase().includes(symbolFilter.toLowerCase())
+    ));
+    
     // Tab switching
     function switchTab(tab: string) {
         selectedTab = tab;
     }
+
 </script>
 
-<main>
 <div class="container">
     <h1>
         {filename} 
@@ -154,16 +161,24 @@
             {#if !sectionsLoaded}
                 <p>Loading Sections...</p>
             {:else}
-                <table>
-                    <thead>
-                        <tr><th>Name</th><th>Type</th><th>Address</th><th>Size</th></tr>
-                    </thead>
-                    <tbody>
-                        {#each sectionHeaders as section}
-                            <tr><td>{section.name}</td><td>{section.typename}</td><td>0x{section.address}</td><td>{section.size}</td></tr>
-                        {/each}
-                    </tbody>
-                </table>
+            <div class="virtual-table-container">
+                <div class="table-header">
+                    <div class="name-col">Name</div>
+                    <div class="type-col">Type</div>
+                    <div class="addr-col">Address</div>
+                    <div class="size-col">Size</div>
+                </div>
+                <VirtualList items={sectionHeaders} style="height: 350px; width: 100%;">
+                    {#snippet vl_slot({ item, index })}
+                        <div class="table-row">
+                            <div class="name-col">{item.name}</div>
+                            <div class="type-col">{item.typename}</div>
+                            <div class="addr-col">0x{item.address}</div>
+                            <div class="size-col">{item.size}</div>
+                        </div>
+                    {/snippet}
+                </VirtualList>
+            </div>
             {/if}
         </div>
     {/if}
@@ -174,16 +189,28 @@
             {#if !programsLoaded}
                 <p>Loading Program Headers...</p>
             {:else}
-                <table>
-                    <thead>
-                        <tr><th>Type</th><th>Flags</th><th>Virtual Address</th><th>Physical Address</th><th>File Size</th><th>Mem Size</th></tr>
-                    </thead>
-                    <tbody>
-                        {#each programHeaders as program}
-                            <tr><td>{program.typename}</td><td>{program.flagstring}</td><td>0x{program.vaddr}</td><td>0x{program.paddr}</td><td>{program.filesz}</td><td>{program.memsz}</td></tr>
-                        {/each}
-                    </tbody>
-                </table>
+            <div class="virtual-table-container">
+                <div class="table-header">
+                    <div class="type-col">Type</div>
+                    <div class="flags-col">Flags</div>
+                    <div class="vaddr-col">Virtual Address</div>
+                    <div class="paddr-col">Physical Address</div>
+                    <div class="filesz-col">File Size</div>
+                    <div class="memsz-col">Mem Size</div>
+                </div>
+                <VirtualList items={programHeaders} style="height: 350px; width: 100%;">
+                    {#snippet vl_slot({ item, index })}
+                        <div class="table-row">
+                            <div class="type-col">{item.typename}</div>
+                            <div class="flags-col">{item.flagstring}</div>
+                            <div class="vaddr-col">0x{item.vaddr}</div>
+                            <div class="paddr-col">0x{item.paddr}</div>
+                            <div class="filesz-col">{item.filesz}</div>
+                            <div class="memsz-col">{item.memsz}</div>
+                        </div>
+                    {/snippet}
+                </VirtualList>
+            </div>
             {/if}
         </div>
     {/if}
@@ -194,22 +221,32 @@
             {#if !symbolsLoaded}
                 <p>Loading Symbols...</p>
             {:else}
-                <input type="text" id="symbolFilter" bind:value={symbolFilter} placeholder="Filter symbols" />
-                <table>
-                    <thead>
-                        <tr><th>Name</th><th>Value</th><th>Size</th><th>Type</th></tr>
-                    </thead>
-                    <tbody>
-                        {#each symbols.filter(symbol => symbol.name.toLowerCase().includes(symbolFilter.toLowerCase())) as symbol}
-                            <tr><td>{symbol.name}</td><td>0x{symbol.value}</td><td>{symbol.size}</td><td>{symbol.isfunction}</td></tr>
-                        {/each}
-                    </tbody>
-                </table>
+            <div class="filter-container">
+                <input type="text" bind:value={symbolFilter} placeholder="Filter..."/>
+                <span class="count-badge">{filteredSymbols.length} of {symbols.length} symbols</span>
+            </div>
+            <div class="virtual-table-container">
+                <div class="table-header">
+                    <div class="name-col">Name</div>
+                    <div class="value-col">Value</div>
+                    <div class="size-col">Size</div>
+                    <div class="type-col">Is Function</div>
+                </div>
+                <VirtualList items={filteredSymbols} style="height: 350px; width: 100%;">
+                    {#snippet vl_slot({ item, index })}
+                        <div class="table-row">
+                            <div class="name-col" role="tooltip" title={item.name}>{item.name}</div>
+                            <div class="value-col">0x{item.value}</div>
+                            <div class="size-col">{item.size}</div>
+                            <div class="type-col">{item.isfunction}</div>
+                        </div>
+                    {/snippet}
+                </VirtualList>
+            </div>
             {/if}
         </div>
     {/if}
 </div>
-</main>
 
 <style>
     :global(body) {
@@ -308,12 +345,83 @@
         background-color: var(--vscode-debugIcon-startForeground);
     }
 
-    #symbolFilter {
+    input[type="text"] {
         background-color: var(--vscode-editor-background);
         border: 1px solid var(--vscode-panel-border);
         padding: 8px 12px;
         color: var(--vscode-editor-foreground);
         margin-bottom: 10px;
         border-radius: 4px;
+        width: 100px;
     }
+
+    input[type="text"]:focus {
+        border: 1px solid var(--vscode-focusBorder);
+        box-shadow: 0 0 4px var(--vscode-focusBorder);
+    }
+
+    .virtual-table-container {
+        width: 100%;
+        border: 1px solid var(--vscode-panel-border, #333333);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .table-header, .table-row {
+        display: flex;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .table-header {
+        background-color: var(--vscode-editor-lineHighlightBackground, #2a2d2e);
+        font-weight: 500;
+        border-bottom: 1px solid var(--vscode-panel-border, #333333);
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    .table-header > div, .table-row > div {
+        padding: 8px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .table-row {
+        border-bottom: 1px solid var(--vscode-panel-border, #333333);
+    }
+
+    .table-row:hover {
+        background-color: var(--vscode-list-hoverBackground, #2a2d2e);
+    }
+
+    :global(.virtual-table-container .svelte-virtuallist) {
+        width: 100% !important;
+    }
+
+    :global(.virtual-table-container .svelte-virtuallist-contents) {
+        width: 100% !important;
+    }
+
+    @media (max-width: 768px) {
+        .file-info-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Column widths */
+    .name-col { flex: 2; min-width: 150px; }
+    .type-col { flex: 1.5; min-width: 120px; }
+    .addr-col, .value-col { flex: 1; min-width: 100px; }
+    .size-col { flex: 0.8; min-width: 80px; }
+    .flags-col { flex: 0.8; min-width: 80px; }
+    .vaddr-col, .paddr-col { flex: 1; min-width: 100px; }
+    .filesz-col, .memsz-col { flex: 0.8; min-width: 80px; }
+    
+    /* Additional columns for Programs table */
+    .flags-col { width: 15%; min-width: 60px; }
+    .vaddr-col, .paddr-col { width: 20%; min-width: 100px; }
+    .filesz-col, .memsz-col { width: 15%; min-width: 80px; }
 </style>
