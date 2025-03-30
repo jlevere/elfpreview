@@ -70,19 +70,15 @@
     }
   },
   "scripts": {
-    "build": "pnpm lint && pnpm esbuild && pnpm run compile:rust",
+    "build": "pnpm lint && mkdir ./dist && pnpm esbuild && pnpm run compile:rust",
     "package": "pnpm lint && pnpm node esbuild.js --production",
     "vscode:prepublish": "pnpm package",
     "esbuild": "node esbuild.js",
     "compile:rust": "cd rust && cargo build --release --target wasm32-unknown-unknown && cp ./target/wasm32-unknown-unknown/release/*.wasm ../dist && cd ..",
-    "compile:ts": "tsc -b tsconfig.json",
-    "watch:ts": "tsc -b tsconfig.json -w",
     "watch:esbulid": "pnpm node esbulid.js --watch",
     "clean": "rimraf ./dist",
     "lint": "eslint ./ts/src ./webview/src",
-    "compile-tests": "tsc -p .",
-    "pretest": "pnpm compile-tests",
-    "test": "vscode-test",
+    "test": "cd rust && cargo test",
     "generate:wit": "wit2ts --outDir ./ts/src ./wit/elf-parser.wit"
   },
   "devDependencies": {
@@ -110,7 +106,6 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "@biomejs/biome",
       "esbuild",
       "svelte-preprocess"
     ]
