@@ -71,7 +71,7 @@
   },
   "scripts": {
     "build": "pnpm lint && mkdir ./dist && pnpm esbuild && pnpm run compile:rust",
-    "package": "pnpm lint && pnpm node esbuild.js --production",
+    "package": "pnpm lint && mkdir ./dist && pnpm node esbuild.js --production && pnpm run compile:rust",
     "vscode:prepublish": "pnpm package",
     "esbuild": "node esbuild.js",
     "compile:rust": "cd rust && cargo build --release --target wasm32-unknown-unknown && cp ./target/wasm32-unknown-unknown/release/*.wasm ../dist && cd ..",
@@ -90,6 +90,7 @@
     "@types/vscode": "^1.98.0",
     "@typescript-eslint/eslint-plugin": "^8.27.0",
     "@vscode/test-cli": "^0.0.10",
+    "@vscode/vsce": "^3.3.1",
     "@vscode/wasm-component-model": "^1.0.1",
     "esbuild": "^0.25.1",
     "esbuild-svelte": "^0.9.2",
@@ -106,6 +107,8 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
+      "@vscode/vsce-sign",
+      "keytar",
       "esbuild",
       "svelte-preprocess"
     ]

@@ -1,12 +1,27 @@
+# build stuff
+.direnv/**
+node_modules/**
 .vscode/**
+.github/**
 .vscode-test/**
+
+# src
 ts/**
+rust/**
+webview/**
+wit/**
+
+# files
+.envrc
+esbuild.js
+flake.lock
+flake.nix
+eslint.config.mjs 
 .gitignore
+
+# file types
 **/tsconfig.json
 **/eslint.config.mjs
 **/*.map
 **/*.ts
 **/.vscode-test.*
-.direnv/**
-node_modules/**
-rust/**
