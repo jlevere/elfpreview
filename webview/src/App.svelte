@@ -91,6 +91,18 @@
         selectedTab = tab;
     }
 
+    // we assume numeric values have been converted to base 10
+    // by the extention.  It takes bigint, but this is just type
+    // weirdness, its actually a string.
+    function convertToBase16(value: bigint | string, className: string = 'UNKNOWN_CLASS'): string {
+        const hexString = BigInt(value).toString(16);
+
+        if (className === 'UNKNOWN_CLASS') {
+            return hexString;
+        }
+        return hexString.padStart(8, '0');
+    }
+
 </script>
 
 <div class="container">
@@ -121,7 +133,12 @@
             <div class="file-metadata">
                 <table>
                     <thead>
-                        <tr><th>Entry Point:</th><td>0x{fileInfo?.entrypoint}</td></tr>
+                        <tr>
+                            <th>Entry Point:</th>
+                            <td>
+                                0x{fileInfo?.entrypoint ? convertToBase16(fileInfo.entrypoint, fileInfo?.class) : 'N/A'}
+                            </td>
+                        </tr>
                         <tr><th>ELF Version:</th><td>{fileInfo?.version}</td></tr>
                         <tr><th>Symbols:</th><td>{symbols.length}</td></tr>
                         <tr><th>Sections:</th><td>{sectionHeaders.length}</td></tr>
@@ -156,7 +173,7 @@
                         <div class="table-row">
                             <div class="name-col">{item.name}</div>
                             <div class="type-col">{item.typename}</div>
-                            <div class="addr-col">0x{item.address}</div>
+                            <div class="addr-col">0x{convertToBase16(item.address, fileInfo?.class)}</div>
                             <div class="size-col">{item.size}</div>
                         </div>
                     {/snippet}
@@ -186,8 +203,8 @@
                         <div class="table-row">
                             <div class="type-col">{item.typename}</div>
                             <div class="flags-col">{item.flagstring}</div>
-                            <div class="vaddr-col">0x{item.vaddr}</div>
-                            <div class="paddr-col">0x{item.paddr}</div>
+                            <div class="vaddr-col">0x{convertToBase16(item.vaddr, fileInfo?.class)}</div>
+                            <div class="paddr-col">0x{convertToBase16(item.paddr, fileInfo?.class)}</div>
                             <div class="filesz-col">{item.filesz}</div>
                             <div class="memsz-col">{item.memsz}</div>
                         </div>
@@ -219,7 +236,7 @@
                     {#snippet vl_slot({ item }: { item: Symbolinfo})}
                         <div class="table-row">
                             <div class="name-col" role="tooltip" title={item.name}>{item.name}</div>
-                            <div class="value-col">0x{item.value}</div>
+                            <div class="value-col">0x{convertToBase16(item.value, fileInfo?.class)}</div>
                             <div class="size-col">{item.size}</div>
                             <div class="type-col">{item.isfunction}</div>
                         </div>

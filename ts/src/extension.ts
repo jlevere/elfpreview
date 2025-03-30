@@ -281,7 +281,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
         /* eslint-disable @typescript-eslint/no-unsafe-return */
         const initialDataScript = /*html*/ `
         <script nonce="${nonce}">
-          window.__INITIAL_DATA__ = ${JSON.stringify(initialData, (_, v) => (typeof v === 'bigint' ? v.toString(16) : v))};
+          window.__INITIAL_DATA__ = ${JSON.stringify(initialData, (_, v) => (typeof v === 'bigint' ? v.toString(10) : v))};
         </script>
       `;
         /* eslint-enable @typescript-eslint/no-unsafe-return */ //TODO: fix this bigint stuff.  its complicated.
@@ -378,7 +378,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
 
     private replaceBigInts = (obj: unknown): unknown => {
         if (typeof obj === 'bigint') {
-            return obj.toString(16);
+            return obj.toString(10);
         } else if (Array.isArray(obj)) {
             return obj.map(this.replaceBigInts);
         } else if (obj && typeof obj === 'object') {
