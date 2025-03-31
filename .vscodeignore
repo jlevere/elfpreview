@@ -18,6 +18,8 @@ flake.lock
 flake.nix
 eslint.config.mjs 
 .gitignore
+pnpm-lock.yaml
+LICENCE.txt
 
 # file types
 **/tsconfig.json

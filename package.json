@@ -70,16 +70,20 @@
     }
   },
   "scripts": {
-    "build": "pnpm lint && mkdir ./dist && pnpm esbuild && pnpm run compile:rust",
-    "package": "pnpm lint && mkdir ./dist && pnpm node esbuild.js --production && pnpm run compile:rust",
-    "vscode:prepublish": "pnpm package",
+    "build": "pnpm lint && pnpm prepare-dist && pnpm esbuild && pnpm compile:rust",
+    "package": "pnpm lint && pnpm prepare-dist && pnpm esbuild:prod && pnpm compile:rust && pnpm vsce:package",
+    "publish": "pnpm package && pnpm vsce:publish",
+    "prepare-dist": "pnpm exec mkdirp dist",
+    "clean": "pnpm exec rimraf dist",
     "esbuild": "node esbuild.js",
-    "compile:rust": "cd rust && cargo build --release --target wasm32-unknown-unknown && cp ./target/wasm32-unknown-unknown/release/*.wasm ../dist && cd ..",
-    "watch:esbulid": "pnpm node esbulid.js --watch",
-    "clean": "rimraf ./dist",
-    "lint": "eslint ./ts/src ./webview/src",
-    "test": "cd rust && cargo test",
-    "generate:wit": "wit2ts --outDir ./ts/src ./wit/elf-parser.wit"
+    "esbuild:prod": "node esbuild.js --production",
+    "watch:esbuild": "pnpm esbuild --watch",
+    "compile:rust": "pnpm exec cargo build --manifest-path rust/Cargo.toml --release --target wasm32-unknown-unknown && pnpm exec cp --update rust/target/wasm32-unknown-unknown/release/*.wasm dist/",
+    "lint": "pnpm exec eslint ./ts/src ./webview/src",
+    "test": "pnpm exec cargo test --manifest-path rust/Cargo.toml",
+    "generate:wit": "pnpm exec wit2ts --outDir ./ts/src ./wit/elf-parser.wit",
+    "vsce:package": "pnpm exec vsce package",
+    "vsce:publish": "pnpm exec vsce publish"
   },
   "devDependencies": {
     "@eslint/js": "^9.23.0",
@@ -97,6 +101,7 @@
     "eslint": "^9.23.0",
     "eslint-plugin-svelte": "^3.3.3",
     "globals": "^16.0.0",
+    "mkdirp": "^3.0.1",
     "rimraf": "^6.0.1",
     "svelte": "^5.0.0",
     "svelte-check": "^4.1.5",

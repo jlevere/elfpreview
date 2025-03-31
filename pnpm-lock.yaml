@@ -53,6 +53,9 @@ importers:
       globals:
         specifier: ^16.0.0
         version: 16.0.0
+      mkdirp:
+        specifier: ^3.0.1
+        version: 3.0.1
       rimraf:
         specifier: ^6.0.1
         version: 6.0.1
@@ -1452,6 +1455,11 @@ packages:
 
   mkdirp-classic@0.5.3:
     resolution: {integrity: sha512-gKLcREMhtuZRwRAfqP3RFW+TK4JqApVBtOIftVgjuABpAtpxhPGaDcfvbhNvD0B8iD1oUr/txX35NjcaY6Ns/A==}
+
+  mkdirp@3.0.1:
+    resolution: {integrity: sha512-+NsyUUAZDmo6YVHzL/stxSu3t9YS1iljliy3BSDrXJ/dkn1KYdmtZODGGjLcc9XLgVVpH4KshHB8XmZgMhaBXg==}
+    engines: {node: '>=10'}
+    hasBin: true
 
   mocha@10.8.2:
     resolution: {integrity: sha512-VZlYo/WE8t1tstuRmqgeyBgCbJc/lEdopaa+axcKzTBJ+UIdlAB9XnmvTCAH4pwR4ElNInaedhEBmZD8iCSVEg==}
@@ -3503,6 +3511,8 @@ snapshots:
 
   mkdirp-classic@0.5.3:
     optional: true
+
+  mkdirp@3.0.1: {}
 
   mocha@10.8.2:
     dependencies:
