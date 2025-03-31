@@ -1,9 +1,9 @@
 # elfpreview
 
-A lightweight VS Code extension that provides d information about ELF files in a clean, no-frills webview-based interface. Combining features similar to `readelf` and `file`, it leverages a modern stack to offer a fast and intuitive experience.
+A lightweight VS Code extension that provides d information about ELF files in a clean, no-frills webview-based interface. Combining features similar to `readelf` and `file`, it uses a modern stack to offer a fast and clean experience.
 
 
-The extention adds an aditional editor, similar to how a hex editor might work, which is used to display a clean table view of information about the currenly open file.
+The extention adds an aditional editor, similar to how a hex editor might work, which is used to display a table view of information about the currenly open file.
 
 ![example-view](./docs/example-simple-view.png)
 
@@ -100,7 +100,7 @@ If you experence any other issues, please submit an issue here: [elfpreview/issu
 
 ## Release Notes
 
-### 0.0.1
+### 0.1.0
 
 Initial release
 
