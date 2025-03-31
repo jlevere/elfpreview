@@ -68,9 +68,7 @@ class ElfPreviewExtension {
                 elfPreviewProvider,
                 {
                     webviewOptions: {
-                        // reparse every time it comes into view.
-                        // This helps lower mem usage since we are fast enough to do it
-                        retainContextWhenHidden: false,
+                        retainContextWhenHidden: true,
                     },
                 },
             ),
