@@ -1,6 +1,6 @@
-# elfpreview README
+# elfpreview
 
-`elfpreview` is an editor extention in vscode that displays `readelf` like information about elf binaries.
+A lightweight VS Code extension that provides d information about ELF files in a clean, no-frills webview-based interface. Combining features similar to `readelf` and `file`, it leverages a modern stack to offer a fast and intuitive experience.
 
 
 The extention adds an aditional editor, similar to how a hex editor might work, which is used to display a clean table view of information about the currenly open file.
@@ -8,11 +8,74 @@ The extention adds an aditional editor, similar to how a hex editor might work, 
 ![example-view](./docs/example-simple-view.png)
 
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Requirements](#requirements)
+- [Extension Settings](#extension-settings)
+- [Known Issues](#known-issues)
+- [Release Notes](#release-notes)
+- [Background](#background)
+
+
+## Overview
+
+This extension is designed to analyze ELF files by:
+
+- Extracting key information in a manner similar to traditional command line tools.
+
+- Presenting a detailed webview with a simple, efficient UI built with Svelte 5.
+
+- Efficiently handling large binaries and files with thousands of symbols.
+
+It is implemented using a combination of Rust (via the [libgoblin](https://github.com/m4b/goblin) library running in WebAssembly) and TypeScript. Communication between the WebAssembly module and the extension is facilitated by WASI and [WIT types](https://component-model.bytecodealliance.org/design/wit.html), ensuring seamless type sharing and solid cross platform preformance.
+
+
+
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+- **Fast File Analysis**: Quickly loads and displays basic file information using server-side rendering (SSR) for instant feedback.
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+- **Detailed Parsing**: In-depth processing of ELF binaries, even those with extensive symbols, done in the background without impacting user experience.
+
+- **No-Frills UI**: A straightforward, functional webview that just works—no unnecessary complexity.
+
+- **Lightweight & Cross Platform**: At only a few hundred kb, the extension is snappy and works on macOS, Windows, Linux, and the web version of VS Code.
+
+
+## Installation
+
+1. **From the VS Code Marketplace:** Search for `elfpreview` in the Extensions view and install it directly
+
+2. **Via VSIX:** Download the provided `.vsix` file from [elfpreview/releases](https://github.com/jlevere/elfpreview/releases) and install it by running
+
+```bash
+code --install-extension elfpreview-<release>.vsix
+```
+
+## Usage
+
+There are two ways to activate the extention, with the [Context Menu](#context-menu) or [Editor Selection](#editor-selection).
+
+### Context Menu
+
+Simply right click on an elf binary and select `ELF: Show Preview`
+
+![Context Menu](./docs/usage-context.png)
+
+### Editor Selection
+
+This is the normal view when you open a non text file.  Vscode does not support editor selection by file type, only file extension, so you get this window.
+
+![Unsupported text encoding](./docs/usage-unsupported.png)
+
+When you select open anyway, you are presented with another dialog option to select the editor you wish to open the file with.  `elfpreview` should be listed as an option.
+
+![Select an Editor ](./docs/usage-editor.png)
+
 
 ## Requirements
 
@@ -20,26 +83,43 @@ If you have any requirements or dependencies, add a section describing those and
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+There are no settings for this extension
 
 ## Known Issues
 
-- Running `pnpm generate` results in typescript type error.  This is because `wit2ts` mixes up some types that need to be manually corrected.  I am unsure if this is a bug or a skill issue.
+- TypeScript Generation Error:
 
-- Using the expected build target for rust, `wasm32-wasi` or `wasm32-wasip2` results in linker errors.  I am unsure why this is the case, or for that matter, why using a more generic target still works, but it does so :shrug:
+    Running `pnpm generate` results in typescript type error.  This is because `wit2ts` mixes up some types that need to be manually corrected.  I am unsure if this is a bug or a skill issue.
+
+- Rust Build Target Warnings:
+
+    Using the expected build target for rust, `wasm32-wasi` or `wasm32-wasip2` results in linker errors.  I am unsure why this is the case, or for that matter, why using a more generic target still works, but it does so :shrug:
+
+
+If you experence any other issues, please submit an issue here: [elfpreview/issues](https://github.com/jlevere/elfpreview/issues)
 
 ## Release Notes
 
 ### 0.0.1
 
 Initial release
+
+
+## Background
+
+How files are processed:
+
+1. Initial Display: Upon opening an ELF file, the extension uses SSR to quickly present basic information (similar to the output of file).
+
+2. Background Processing: The heavy lifting is performed in the background:
+
+    - The binary is read into WebAssembly.
+
+    - The Rust-based parser (using libgoblin) processes the file.
+
+    - Data is then incrementally populated into the webview.
+
+3. Communication: Type sharing between TypeScript and WebAssembly is managed via WASI and WIT, with stubs generated using [Microsoft's wit2ts tool](https://github.com/microsoft/vscode-wasm/blob/main/wasm-component-model/bin/wit2ts).
 
 
 ## Tests
