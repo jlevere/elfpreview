@@ -2,6 +2,7 @@
   "name": "elfpreview",
   "displayName": "elfPreview",
   "description": "Preview ELF binary files in VS Code",
+  "publisher": "jlevere",
   "author": "https://github.com/jlevere",
   "version": "0.1.0",
   "keywords": [
@@ -16,8 +17,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/jlevere/elfpreview.git",
-    "directory": "."
+    "url": "https://github.com/jlevere/elfpreview.git"
   },
   "bugs": {
     "url": "https://github.com/jlevere/elfpreview/issues"
