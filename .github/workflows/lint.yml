@@ -1,4 +1,4 @@
-name: Build and Lint
+name: Lint and Test
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,5 +22,5 @@ jobs:
           cache: ${{ secrets.ATTIC_CACHE }}
           token: ${{ secrets.ATTIC_TOKEN }}
 
-      - run: nix develop .#build --command pnpm install
-      - run: nix develop .#build --command pnpm run build
+      - run: nix develop .#pnpmBuild --command pnpm install
+      - run: nix develop .#pnpmBuild --command pnpm lint

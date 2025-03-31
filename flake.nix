@@ -41,13 +41,20 @@
           ];
         };
 
-        build = pkgs.mkShell {
+        wasmBuild = pkgs.mkShell {
           buildInputs = with pkgs; [
             nodejs
             nodePackages.pnpm
             wasm-tools
             llvmPackages.bintools
             rust
+          ];
+        };
+
+        pnpmBuild = pkgs.mkShell {
+          buildInputs = with pkgs; [
+            nodejs
+            nodePackages.pnpm
           ];
         };
       };

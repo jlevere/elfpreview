@@ -3,12 +3,13 @@
   "displayName": "elfPreview",
   "description": "Preview ELF binary files in VS Code",
   "author": "https://github.com/jlevere",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "keywords": [
     "VSCode",
     "Elf",
     "Editor",
-    "Preview"
+    "Preview",
+    "Binary"
   ],
   "categories": [
     "Other"
@@ -78,7 +79,7 @@
     "esbuild": "node esbuild.js",
     "esbuild:prod": "node esbuild.js --production",
     "watch:esbuild": "pnpm esbuild --watch",
-    "compile:rust": "pnpm exec cargo build --manifest-path rust/Cargo.toml --release --target wasm32-unknown-unknown && pnpm exec cp --update rust/target/wasm32-unknown-unknown/release/*.wasm dist/",
+    "compile:rust": "pnpm prepare-dist && pnpm exec cargo build --manifest-path rust/Cargo.toml --release --target wasm32-unknown-unknown && pnpm exec cp --update rust/target/wasm32-unknown-unknown/release/*.wasm dist/",
     "lint": "pnpm exec eslint ./ts/src ./webview/src",
     "test": "pnpm exec cargo test --manifest-path rust/Cargo.toml",
     "generate:wit": "pnpm exec wit2ts --outDir ./ts/src ./wit/elf-parser.wit",
