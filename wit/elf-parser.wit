@@ -19,9 +19,11 @@ interface types {
 
   record symbolinfo {
     name: string,
+    typestr: string,
+    bind: string,
+    vis: string,
     value: u64,
     size: u64,
-    isfunction: bool,
   }
 
   record fileinfo {

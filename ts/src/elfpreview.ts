@@ -25,9 +25,11 @@ export namespace Types {
 
 	export type Symbolinfo = {
 		name: string;
+		typestr: string;
+		bind: string;
+		vis: string;
 		value: u64;
 		size: u64;
-		isfunction: boolean;
 	};
 
 	export type Fileinfo = {
@@ -119,9 +121,11 @@ export namespace Types.$ {
 	]);
 	export const Symbolinfo = new $wcm.RecordType<Types.Symbolinfo>([
 		['name', $wcm.wstring],
+		['typestr', $wcm.wstring],
+		['bind', $wcm.wstring],
+		['vis', $wcm.wstring],
 		['value', $wcm.u64],
 		['size', $wcm.u64],
-		['isfunction', $wcm.bool],
 	]);
 	export const Fileinfo = new $wcm.RecordType<Types.Fileinfo>([
 		['machine', $wcm.wstring],
@@ -157,13 +161,13 @@ export namespace Types._ {
 export namespace Elfparser.$ {
 	export const Elfinfo = Types.$.Elfinfo;
 	export const Fileinfo = Types.$.Fileinfo;
-	export const parseelf = new $wcm.FunctionType<Elfparser.parseelf>('parseelf', [
+	export const parseelf = new $wcm.FunctionType<Elfparser.parseelf>('parseelf',[
 		['data', new $wcm.Uint8ArrayType()],
 	], new $wcm.ResultType<Elfparser.Elfinfo, string>(Elfinfo, $wcm.wstring, $wcm.wstring.Error));
-	export const validateelf = new $wcm.FunctionType<Elfparser.validateelf>('validateelf', [
+	export const validateelf = new $wcm.FunctionType<Elfparser.validateelf>('validateelf',[
 		['data', new $wcm.Uint8ArrayType()],
 	], new $wcm.ResultType<boolean, string>($wcm.bool, $wcm.wstring, $wcm.wstring.Error));
-	export const quickparseelf = new $wcm.FunctionType<Elfparser.quickparseelf>('quickparseelf', [
+	export const quickparseelf = new $wcm.FunctionType<Elfparser.quickparseelf>('quickparseelf',[
 		['data', new $wcm.Uint8ArrayType()],
 	], new $wcm.ResultType<Elfparser.Fileinfo, string>(Fileinfo, $wcm.wstring, $wcm.wstring.Error));
 }

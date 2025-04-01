@@ -178,9 +178,11 @@ fn build_sym_info(elf: &Elf) -> Vec<elfpreview::parser::types::Symbolinfo> {
             let name = elf.strtab.get_at(sym.st_name).unwrap_or("").to_string();
             elfpreview::parser::types::Symbolinfo {
                 name,
+                typestr: goblin::elf::sym::type_to_str(sym.st_type()).to_string(),
+                bind: goblin::elf::sym::bind_to_str(sym.st_bind()).to_string(),
+                vis: goblin::elf::sym::visibility_to_str(sym.st_type()).to_string(),
                 value: sym.st_value,
                 size: sym.st_size,
-                isfunction: sym.is_function(), // TODO: need to update to extract more info about `st_info`
             }
         })
         .collect();
