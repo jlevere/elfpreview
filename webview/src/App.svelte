@@ -257,7 +257,7 @@
           <input
             type="text"
             bind:value={symbolFilter}
-            placeholder="Filter..."
+            placeholder="Filter name..."
           />
           <span class="count-badge"
             >{filteredSymbols.length} of {symbols.length} symbols</span
@@ -472,7 +472,8 @@
   }
   .type-col {
     flex: 1.5;
-    min-width: 120px;
+    min-width: 90px;
+    max-width: 120px;
   }
   .addr-col {
     flex: 1;
