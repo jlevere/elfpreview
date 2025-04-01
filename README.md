@@ -12,7 +12,6 @@ The extention adds an aditional editor, similar to how a hex editor might work, 
 - [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
-- [Requirements](#requirements)
 - [Extension Settings](#extension-settings)
 - [Known Issues](#known-issues)
 - [Release Notes](#release-notes)
@@ -70,10 +69,6 @@ When you select open anyway, you are presented with another dialog option to sel
 
 ![Select an Editor ](./docs/usage-editor.png)
 
-## Requirements
-
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
-
 ## Extension Settings
 
 There are no settings for this extension
@@ -91,6 +86,10 @@ There are no settings for this extension
 If you experence any other issues, please submit an issue here: [elfpreview/issues](https://github.com/jlevere/elfpreview/issues)
 
 ## Release Notes
+
+### 0.1.1
+
+Added more information about symbols
 
 ### 0.1.0
 
