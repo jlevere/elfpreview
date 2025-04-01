@@ -265,10 +265,12 @@
         </div>
         <div class="virtual-table-container">
           <div class="table-header">
-            <div class="name-col">Name</div>
-            <div class="value-col">Value</div>
+            <div class="sym-value-col">Value</div>
             <div class="size-col">Size</div>
-            <div class="type-col">Is Function</div>
+            <div class="sym-type-col">Type</div>
+            <div class="bind-col">Bind</div>
+            <div class="vis-col">Vis</div>
+            <div class="name-col">Name</div>
           </div>
           <VirtualList
             items={filteredSymbols}
@@ -276,14 +278,16 @@
           >
             {#snippet vl_slot({ item }: { item: Symbolinfo })}
               <div class="table-row">
-                <div class="name-col" role="tooltip" title={item.name}>
-                  {item.name}
-                </div>
-                <div class="value-col">
+                <div class="sym-value-col">
                   0x{convertToBase16(item.value, fileInfo?.class)}
                 </div>
                 <div class="size-col">{item.size}</div>
-                <div class="type-col">{item.isfunction}</div>
+                <div class="sym-type-col">{item.typestr}</div>
+                <div class="bind-col">{item.bind}</div>
+                <div class="vis-col">{item.vis}</div>
+                <div class="name-col" role="tooltip" title={item.name}>
+                  {item.name}
+                </div>
               </div>
             {/snippet}
           </VirtualList>
@@ -470,15 +474,11 @@
     flex: 1.5;
     min-width: 120px;
   }
-  .addr-col,
-  .value-col {
+  .addr-col {
     flex: 1;
     min-width: 100px;
   }
-  .size-col {
-    flex: 0.8;
-    min-width: 80px;
-  }
+
   .flags-col {
     flex: 0.8;
     min-width: 80px;
@@ -507,5 +507,27 @@
   .memsz-col {
     width: 15%;
     min-width: 80px;
+  }
+
+  .sym-value-col {
+    width: 10%;
+    min-width: 80px;
+    max-width: 110px;
+  }
+
+  .vis-col,
+  .sym-type-col {
+    width: 8%;
+    min-width: 40px;
+    max-width: 60px;
+    text-align: left;
+  }
+
+  .size-col,
+  .bind-col {
+    width: 8%;
+    min-width: 40px;
+    max-width: 60px;
+    text-align: right;
   }
 </style>
