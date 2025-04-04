@@ -4,7 +4,7 @@
   "description": "Preview ELF binary files in VS Code",
   "publisher": "jlevere",
   "author": "https://github.com/jlevere",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "keywords": [
     "VSCode",
     "Elf",
