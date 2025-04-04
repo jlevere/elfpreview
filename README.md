@@ -41,7 +41,7 @@ It is implemented using a combination of Rust (via the [libgoblin](https://githu
 
 ## Installation
 
-1. **From the VS Code Marketplace:** Search for `elfpreview` in the Extensions view and install it directly
+1. **From the VS Code Marketplace:** Search for `elfpreview` in the Extensions view and install it directly: [marketplace.visualstudio.com/elfpreview](https://marketplace.visualstudio.com/items?itemName=jlevere.elfpreview)
 
 2. **Via VSIX:** Download the provided `.vsix` file from [elfpreview/releases](https://github.com/jlevere/elfpreview/releases) and install it by running
 
