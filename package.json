@@ -15,6 +15,11 @@
   "categories": [
     "Other"
   ],
+  "icon": "docs/elfpreview.png",
+  "galleryBanner": {
+    "color": "#777777",
+    "theme": "dark"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/jlevere/elfpreview.git"

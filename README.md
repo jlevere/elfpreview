@@ -69,6 +69,8 @@ When you select open anyway, you are presented with another dialog option to sel
 
 ![Select an Editor ](./docs/usage-editor.png)
 
+![usage](./docs/usage.gif)
+
 ## Extension Settings
 
 There are no settings for this extension
