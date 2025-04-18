@@ -128,7 +128,12 @@ fn build_file_info(elf: &Elf) -> elfpreview::parser::types::Fileinfo {
 }
 
 fn build_dynlink_info(elf: &Elf) -> elfpreview::parser::types::Dynlinkinfo {
-    let is_dynamic = elf.is_lib || !elf.dynamic.is_none() || !elf.libraries.is_empty();
+    let is_dynamic = elf.is_lib
+        || !elf.dynamic.is_none()
+        || !elf.libraries.is_empty()
+        || elf.interpreter.is_some()
+        || !elf.rpaths.is_empty()
+        || !elf.runpaths.is_empty();
 
     let interpreter = elf.interpreter.map(String::from);
     let needed_libs = elf.libraries.iter().map(|lib| lib.to_string()).collect();
