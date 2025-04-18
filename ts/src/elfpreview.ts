@@ -43,11 +43,21 @@ export namespace Types {
 		stripped: boolean;
 	};
 
+	export type Dynlinkinfo = {
+		isDynamic: boolean;
+		interpreter?: string | undefined;
+		neededLibs: string[];
+		soname?: string | undefined;
+		rpath?: string[] | undefined;
+		runpath?: string[] | undefined;
+	};
+
 	export type Elfinfo = {
 		info: Fileinfo;
 		sectionheaders: Sectioninfo[];
 		programheaders: Programinfo[];
 		symbols: Symbolinfo[];
+		dynlink: Dynlinkinfo;
 	};
 }
 export type Types = {
@@ -137,11 +147,20 @@ export namespace Types.$ {
 		['version', $wcm.u32],
 		['stripped', $wcm.bool],
 	]);
+	export const Dynlinkinfo = new $wcm.RecordType<Types.Dynlinkinfo>([
+		['isDynamic', $wcm.bool],
+		['interpreter', new $wcm.OptionType<string>($wcm.wstring)],
+		['neededLibs', new $wcm.ListType<string>($wcm.wstring)],
+		['soname', new $wcm.OptionType<string>($wcm.wstring)],
+		['rpath', new $wcm.OptionType<string[]>(new $wcm.ListType<string>($wcm.wstring))],
+		['runpath', new $wcm.OptionType<string[]>(new $wcm.ListType<string>($wcm.wstring))],
+	]);
 	export const Elfinfo = new $wcm.RecordType<Types.Elfinfo>([
 		['info', Fileinfo],
 		['sectionheaders', new $wcm.ListType<Types.Sectioninfo>(Sectioninfo)],
 		['programheaders', new $wcm.ListType<Types.Programinfo>(Programinfo)],
 		['symbols', new $wcm.ListType<Types.Symbolinfo>(Symbolinfo)],
+		['dynlink', Dynlinkinfo],
 	]);
 }
 export namespace Types._ {
@@ -152,6 +171,7 @@ export namespace Types._ {
 		['Programinfo', $.Programinfo],
 		['Symbolinfo', $.Symbolinfo],
 		['Fileinfo', $.Fileinfo],
+		['Dynlinkinfo', $.Dynlinkinfo],
 		['Elfinfo', $.Elfinfo]
 	]);
 	export type WasmInterface = {

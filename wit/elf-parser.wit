@@ -37,11 +37,21 @@ interface types {
     stripped: bool,
   }
 
+  record dynlinkinfo {
+    is-dynamic: bool,
+    interpreter: option<string>,
+    needed-libs: list<string>,
+    soname: option<string>,
+    rpath: option<list<string>>,
+    runpath: option<list<string>>,
+  }
+
   record elfinfo {
     info: fileinfo,
     sectionheaders: list<sectioninfo>,
     programheaders: list<programinfo>,
     symbols: list<symbolinfo>,
+    dynlink: dynlinkinfo,
   }
 }
 

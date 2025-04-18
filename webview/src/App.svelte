@@ -17,6 +17,7 @@
   type Programinfo = Types.Programinfo;
   type Symbolinfo = Types.Symbolinfo;
   type Fileinfo = Types.Fileinfo;
+  type Dynlinkinfo = Types.Dynlinkinfo;
 
   // hydrated props
   const filename = initialData.filename || "Unknown ELF File";
@@ -26,14 +27,17 @@
   let sectionHeaders = $state<Sectioninfo[]>([]);
   let programHeaders = $state<Programinfo[]>([]);
   let symbols = $state<Symbolinfo[]>([]);
+  let dynInfo = $state<Dynlinkinfo>();
   let sectionsLoaded = $state(false);
   let programsLoaded = $state(false);
   let symbolsLoaded = $state(false);
   let stripped = $state("");
+  let dynamic = $state(false);
 
   // Message types for staged loading
   type MessageType =
     | "strip-info"
+    | "dyn-info"
     | "section-info"
     | "program-info"
     | "symbol-info"
@@ -41,31 +45,37 @@
 
   type Payload = {
     type: MessageType;
-    data?: Sectioninfo[] | Programinfo[] | Symbolinfo[] | string;
+    data?: Sectioninfo[] | Programinfo[] | Symbolinfo[] | Dynlinkinfo | string;
     error?: string;
   };
 
   // Handle incoming messages with staged loading
   function handleMessage(event: MessageEvent<Payload>) {
-    const message = event.data;
+    const { type, data } = event.data;
 
-    switch (message.type) {
+    switch (type) {
       case "strip-info":
-        stripped = (message.data as string) || "";
+        stripped = (data as string) || "";
+        break;
+
+      case "dyn-info":
+        dynInfo = (data as Dynlinkinfo) || null;
+        dynamic = dynInfo?.isDynamic ?? false;
+        console.log("dynInfo:", dynInfo);
         break;
 
       case "section-info":
-        sectionHeaders = (message.data as Sectioninfo[]) || [];
+        sectionHeaders = (data as Sectioninfo[]) || [];
         sectionsLoaded = true;
         break;
 
       case "program-info":
-        programHeaders = (message.data as Programinfo[]) || [];
+        programHeaders = (data as Programinfo[]) || [];
         programsLoaded = true;
         break;
 
       case "symbol-info":
-        symbols = (message.data as Symbolinfo[]) || [];
+        symbols = (data as Symbolinfo[]) || [];
         symbolsLoaded = true;
         break;
     }
@@ -153,6 +163,9 @@
             <tr><th>ELF Version:</th><td>{fileInfo?.version}</td></tr>
             <tr><th>Symbols:</th><td>{symbols.length}</td></tr>
             <tr><th>Sections:</th><td>{sectionHeaders.length}</td></tr>
+            {#if dynamic}
+              <tr><th>Interpreter:</th><td>{dynInfo?.interpreter}</td></tr>
+            {/if}
           </thead>
           <tbody></tbody>
         </table>
@@ -173,6 +186,12 @@
       class:active={selectedTab === "Symbols"}
       onclick={() => switchTab("Symbols")}>Symbols</button
     >
+    {#if dynamic}
+      <button
+        class:active={selectedTab === "Dynamic"}
+        onclick={() => switchTab("Dynamic")}>Dynamic Info</button
+      >
+    {/if}
   </div>
 
   {#if selectedTab === "Sections"}
@@ -292,6 +311,87 @@
             {/snippet}
           </VirtualList>
         </div>
+      {/if}
+    </div>
+  {/if}
+
+  {#if selectedTab === "Dynamic" && dynamic}
+    <div class="tabcontent active">
+      <h3>Dynamic Linking Information</h3>
+      {#if dynInfo?.isDynamic}
+        <div class="virtual-table-container">
+          <div class="table-header">
+            <div class="name-col">Property</div>
+            <div class="value-col">Value</div>
+          </div>
+
+          {#if dynInfo.soname}
+            <div class="table-row">
+              <div class="name-col">SONAME</div>
+              <div class="value-col">{dynInfo.soname}</div>
+            </div>
+          {/if}
+
+          <div class="table-row">
+            <div class="value-col">
+              {#if dynInfo.neededLibs?.length}
+                {#each dynInfo.neededLibs as lib, i (lib)}
+                  <div class="table-row">
+                    {#if i === 0}
+                      <div class="name-col">DT_NEEDED</div>
+                    {:else}
+                      <div class="name-col"></div>
+                    {/if}
+                    <div
+                      class="value-col"
+                      role="tooltip"
+                      title="Resolved at load time, so no path"
+                    >
+                      {lib}
+                    </div>
+                  </div>
+                {/each}
+              {:else}
+                <div class="table-row">
+                  <div class="name-col">DT_NEEDED</div>
+                  <div class="value-col">None</div>
+                </div>
+              {/if}
+            </div>
+          </div>
+
+          <div class="table-row">
+            <div class="name-col">RPATH</div>
+            <div class="value-col">
+              {#if dynInfo.rpath?.length}
+                <ul>
+                  {#each dynInfo.rpath as path (path)}
+                    <li role="tooltip" title={path}>{path}</li>
+                  {/each}
+                </ul>
+              {:else}
+                None
+              {/if}
+            </div>
+          </div>
+
+          <div class="table-row">
+            <div class="name-col">RUNPATH</div>
+            <div class="value-col">
+              {#if dynInfo.runpath?.length}
+                <ul>
+                  {#each dynInfo.runpath as path (path)}
+                    <li role="tooltip" title={path}>{path}</li>
+                  {/each}
+                </ul>
+              {:else}
+                None
+              {/if}
+            </div>
+          </div>
+        </div>
+      {:else}
+        <p>This binary is statically linked.</p>
       {/if}
     </div>
   {/if}

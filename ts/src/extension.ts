@@ -193,9 +193,18 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
       if (parsedData.info) {
         webviewPanel.webview.postMessage({
           type: "strip-info",
-          data: this.replaceBigInts(String(parsedData.info.stripped)),
+          data: String(parsedData.info.stripped),
         });
       }
+
+      /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+      if (parsedData.dynlink) {
+        webviewPanel.webview.postMessage({
+          type: "dyn-info",
+          data: parsedData.dynlink,
+        });
+      }
+      /* eslint-enable @typescript-eslint/no-unsafe-assignment */
 
       if (parsedData.sectionheaders) {
         webviewPanel.webview.postMessage({

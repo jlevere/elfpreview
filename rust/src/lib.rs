@@ -18,6 +18,7 @@ impl Guest for ElfParser {
                     sectionheaders: build_section_info(&elf),
                     programheaders: build_program_info(&elf),
                     symbols: build_sym_info(&elf),
+                    dynlink: build_dynlink_info(&elf),
                 };
 
                 Ok(info)
@@ -77,6 +78,10 @@ fn quick_parse_elf_header(data: &[u8]) -> Result<elfpreview::parser::types::File
     let entry_point = data.pread_with::<u64>(24, Endian::Little).unwrap_or(0);
     let version = data.pread_with::<u32>(20, Endian::Little).unwrap_or(0);
 
+    // Note: For quickparseelf, we're not doing the deep scan to check if it's stripped
+    // A proper check would require parsing the section headers
+    let stripped = false;
+
     Ok(elfpreview::parser::types::Fileinfo {
         machine,
         entrypoint: entry_point,
@@ -85,7 +90,7 @@ fn quick_parse_elf_header(data: &[u8]) -> Result<elfpreview::parser::types::File
         osabi,
         filetype: file_type,
         version,
-        stripped: false, // This is unfortunate, but we need symbols for this, so always false
+        stripped,
     })
 }
 
@@ -120,6 +125,41 @@ fn build_file_info(elf: &Elf) -> elfpreview::parser::types::Fileinfo {
         version: elf.header.e_version,
         stripped: is_stripped,
     };
+}
+
+fn build_dynlink_info(elf: &Elf) -> elfpreview::parser::types::Dynlinkinfo {
+    let is_dynamic = elf.is_lib
+        || !elf.dynamic.is_none()
+        || !elf.libraries.is_empty()
+        || elf.interpreter.is_some()
+        || !elf.rpaths.is_empty()
+        || !elf.runpaths.is_empty();
+
+    let interpreter = elf.interpreter.map(String::from);
+    let needed_libs = elf.libraries.iter().map(|lib| lib.to_string()).collect();
+
+    let soname = elf.soname.map(String::from);
+
+    let rpath = if elf.rpaths.is_empty() {
+        None
+    } else {
+        Some(elf.rpaths.iter().map(|s| s.to_string()).collect())
+    };
+
+    let runpath = if elf.runpaths.is_empty() {
+        None
+    } else {
+        Some(elf.runpaths.iter().map(|s| s.to_string()).collect())
+    };
+
+    elfpreview::parser::types::Dynlinkinfo {
+        is_dynamic,
+        interpreter,
+        needed_libs,
+        soname,
+        rpath,
+        runpath,
+    }
 }
 
 fn build_section_info(elf: &Elf) -> Vec<elfpreview::parser::types::Sectioninfo> {
