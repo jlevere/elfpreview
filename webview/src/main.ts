@@ -1,19 +1,20 @@
 import { mount } from "svelte";
-import App from "./App.svelte";
-import type { Types } from "../../ts/src/elfpreview";
+import Root from "./App.svelte";
+import "./App.css";
+import type { Types } from "@bininspect";
 
 declare global {
   interface Window {
     __INITIAL_DATA__?: {
       filename?: string;
-      fileinfo?: Types.Fileinfo;
+      basicInfo?: Types.BasicInfo;
     };
   }
 }
 
 const initialData = window.__INITIAL_DATA__!;
 
-const app = mount(App, {
+const app = mount(Root, {
   target: document.getElementById("app")!,
   props: {
     initialData,
