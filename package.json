@@ -32,7 +32,9 @@
     "vscode": "^1.98.0",
     "node": "^v22.13.1"
   },
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
   "capabilities": {
     "virtualWorkspaces": true,
