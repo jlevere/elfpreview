@@ -1,44 +1,42 @@
-// See https://go.microsoft.com/fwlink/?LinkId=733558
-// for the documentation about the tasks.json format
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"type": "npm",
-			"script": "pnpm node esbuild.js",
-			"problemMatcher": "$tsc-watch",
-			"isBackground": true,
-			"presentation": {
-				"reveal": "never"
-			},
-			"group": {
-				"kind": "build",
-				"isDefault": true
-			}
-		},
-		{
-			"type": "npm",
-			"script": "watch:esbuild",
-			"group": "build",
-			"problemMatcher": "$esbuild-watch",
-			"isBackground": true,
-			"label": "pnpm: watch:esbuild",
-			"presentation": {
-				"group": "watch",
-				"reveal": "never"
-			}
-		},
-		{
-			"type": "npm",
-			"script": "watch:tsc",
-			"group": "build",
-			"problemMatcher": "$tsc-watch",
-			"isBackground": true,
-			"label": "pnpm: watch:tsc",
-			"presentation": {
-				"group": "watch",
-				"reveal": "never"
-			}
-		}
-	]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "npm",
+      "script": "pnpm node esbuild.js",
+      "problemMatcher": "$tsc-watch",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "never"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "type": "npm",
+      "script": "watch:esbuild",
+      "group": "build",
+      "problemMatcher": "$esbuild-watch",
+      "isBackground": true,
+      "label": "pnpm: watch:esbuild",
+      "presentation": {
+        "group": "watch",
+        "reveal": "never"
+      }
+    },
+    {
+      "type": "npm",
+      "script": "watch:tsc",
+      "group": "build",
+      "problemMatcher": "$tsc-watch",
+      "isBackground": true,
+      "label": "pnpm: watch:tsc",
+      "presentation": {
+        "group": "watch",
+        "reveal": "never"
+      }
+    }
+  ]
 }
