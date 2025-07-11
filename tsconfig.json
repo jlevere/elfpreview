@@ -1,15 +1,15 @@
 {
-    "compilerOptions": {
-        "incremental": true,
-        "composite": true
+  "compilerOptions": {
+    "incremental": true,
+    "composite": true
+  },
+  "files": [],
+  "references": [
+    {
+      "path": "ts/tsconfig.json"
     },
-    "files": [],
-    "references": [
-        {
-            "path": "ts/tsconfig.json"
-        },
-        {
-            "path": "webview/tsconfig.json"
-        }
-    ]
+    {
+      "path": "webview/tsconfig.json"
+    }
+  ]
 }

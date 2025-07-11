@@ -39,21 +39,41 @@ async function main() {
     conditions: ["svelte"],
   };
 
+  // Build configuration for the background worker that hosts the WebAssembly component
+  const workerConfig = {
+    entryPoints: ["ts/src/wasmWorker.ts"],
+    bundle: true,
+    format: "cjs",
+    minify: production,
+    sourcemap: !production,
+    sourcesContent: false,
+    platform: "node",
+    outfile: "dist/wasmWorker.js",
+    external: ["vscode"],
+    logLevel: "warning",
+    plugins: [esbuildProblemMatcherPlugin],
+  };
+
   const ctx = await esbuild.context({
     ...extensionConfig,
     plugins: [esbuildProblemMatcherPlugin],
   });
+
+  const workerCtx = await esbuild.context(workerConfig);
 
   const webviewCtx = await esbuild.context(webviewConfig);
 
   if (watch) {
     await ctx.watch();
     await webviewCtx.watch();
+    await workerCtx.watch();
   } else {
     await ctx.rebuild();
     await webviewCtx.rebuild();
+    await workerCtx.rebuild();
     await ctx.dispose();
     await webviewCtx.dispose();
+    await workerCtx.dispose();
   }
 }
 

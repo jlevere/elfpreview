@@ -15,6 +15,7 @@ export default defineConfig([
       parserOptions: {
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
+        allowDefaultProject: true,
       },
       globals: {
         ...globals.browser,
@@ -23,6 +24,10 @@ export default defineConfig([
     },
   },
   {
-    ignores: ["**/elfpreview.ts"],
+    ignores: [
+      "**/bininspect.ts", // generated – handled by `wit2ts`
+      "esbuild.js",
+      "eslint.config.mjs",
+    ],
   },
 ]);
