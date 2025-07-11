@@ -22,6 +22,7 @@
         combine [
           stable.toolchain
           targets.wasm32-unknown-unknown.stable.rust-std
+          targets.wasm32-wasip1.stable.rust-std
         ];
     in {
       devShells = {
