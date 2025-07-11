@@ -1,73 +1,170 @@
-package elfpreview:parser;
+package bininspect:api;
 
 interface types {
-  record sectioninfo {
+  // ------------------------------------------------------------------------
+  // Basic identification enums
+  // ------------------------------------------------------------------------
+
+  /// Supported binary container formats.
+  enum format {
+    elf,
+    pe,
+    mach,
+    unknown,
+  }
+
+  /// CPU bit-width of the binary.
+  enum bitness {
+    bits32,
+    bits64,
+  }
+
+  /// Endianness of encoded integers.
+  enum endianness {
+    little,
+    big,
+  }
+
+  // ------------------------------------------------------------------------
+  // Fast identification result (returned by `identify`)
+  // ------------------------------------------------------------------------
+  record basic-info {
+    format: format,
+    arch: string,          // e.g. "x86", "x86_64", "arm", "riscv" …
+    bitness: bitness,
+    endianness: endianness,
+    file-type: string,     // Executable, Relocatable, Shared, Core … (string keeps this open-ended)
+    entry-point: option<u64>,
+    stripped: bool,
+  }
+
+  // ------------------------------------------------------------------------
+  // ELF-specific structures
+  // ------------------------------------------------------------------------
+  record elf-section-info {
     name: string,
     size: u64,
     address: u64,
-    typename: string,
+    kind: string,
   }
 
-  record programinfo {
-    typename: string,
-    flagstring: string,
+  record elf-program-header {
+    kind: string,
+    flag-string: string,
     vaddr: u64,
     paddr: u64,
-    filesz: u64,
-    memsz: u64,
+    file-size: u64,
+    mem-size: u64,
   }
 
-  record symbolinfo {
+  record elf-symbol-info {
     name: string,
-    typestr: string,
+    kind: string,
     bind: string,
     vis: string,
     value: u64,
     size: u64,
   }
 
-  record fileinfo {
-    machine: string,
-    entrypoint: u64,
-    class: string,
-    endianness: string,
-    osabi: string,
-    filetype: string,
-    version: u32,
-    stripped: bool,
-  }
-
-  record dynlinkinfo {
+  record elf-dynlink-info {
     is-dynamic: bool,
     interpreter: option<string>,
     needed-libs: list<string>,
     soname: option<string>,
-    rpath: option<list<string>>,
-    runpath: option<list<string>>,
+    rpath: option<list<string>>,  // DT_RPATH
+    runpath: option<list<string>>, // DT_RUNPATH
   }
 
-  record elfinfo {
-    info: fileinfo,
-    sectionheaders: list<sectioninfo>,
-    programheaders: list<programinfo>,
-    symbols: list<symbolinfo>,
-    dynlink: dynlinkinfo,
+  record elf-details {
+    sections: list<elf-section-info>,
+    program-headers: list<elf-program-header>,
+    symbols: list<elf-symbol-info>,
+    dynlink: elf-dynlink-info,
+  }
+
+  // ------------------------------------------------------------------------
+  // PE-specific structures
+  // ------------------------------------------------------------------------
+  record pe-section-info {
+    name: string,
+    virtual-size: u32,
+    virtual-address: u32,
+    size-of-raw-data: u32,
+    pointer-to-raw-data: u32,
+    characteristics: string,
+  }
+
+  record pe-import-info {
+    dll-name: string,
+    functions: list<string>,
+  }
+
+  record pe-export-info {
+    name: string,
+    ordinal: u16,
+    rva: u32,
+  }
+
+  record pe-details {
+    sections: list<pe-section-info>,
+    imports: list<pe-import-info>,
+    exports: list<pe-export-info>,
+    subsystem: string,
+    dll-characteristics: string,
+    image-base: u64,
+  }
+
+  // ------------------------------------------------------------------------
+  // Mach-O specific structures
+  // ------------------------------------------------------------------------
+  record mach-segment-info {
+    name: string,
+    vmaddr: u64,
+    vmsize: u64,
+    fileoff: u64,
+    filesize: u64,
+    prot: string,
+  }
+
+  record mach-dylib-info {
+    name: string,
+    current-version: string,
+  }
+
+  record mach-details {
+    segments: list<mach-segment-info>,
+    dylibs: list<mach-dylib-info>,
+  }
+
+  // ------------------------------------------------------------------------
+  // Aggregate parse result – easy to extend in the future
+  // ------------------------------------------------------------------------
+  variant details {
+    elf(elf-details),
+    pe(pe-details),
+    mach(mach-details),
+    unsupported,
   }
 }
 
-interface elfparser {
-  use types.{elfinfo, fileinfo};
- 
-  // Parse an ELF binary file
-  parseelf: func(data: list<u8>) -> result<elfinfo, string>;
-  
-  // Check if file is valid ELF
-  validateelf: func(data: list<u8>) -> result<bool, string>;
+// --------------------------------------------------------------------------
+// Public inspector interface
+// --------------------------------------------------------------------------
+interface inspector {
+  use types.{basic-info, details};
 
-  // Parse just the header
-  quickparseelf: func(data: list<u8>) -> result<fileinfo, string>;
+  /// Fast identification based only on the container header (akin to the `file` utility).
+  identify: func(data: list<u8>) -> result<basic-info, string>;
+
+  /// Full parse of the binary, returning format-specific information.
+  /// The caller should typically invoke `identify` first and only call this
+  /// when the reported format is something they want to inspect deeply.
+  parse: func(data: list<u8>) -> result<details, string>;
 }
 
-world elfpreview {
-  export elfparser;
+// --------------------------------------------------------------------------
+// Component world description
+// --------------------------------------------------------------------------
+world bininspect {
+  export inspector;
 }
