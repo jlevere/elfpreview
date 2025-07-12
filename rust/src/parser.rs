@@ -1,7 +1,6 @@
 use crate::model::{self, Format};
 use crate::{elf, mach, pe};
 use goblin::Object;
-use infer;
 
 /// Perform a very fast type identification using `infer` magic-number matchers only.
 /// This works on the first few kB of the buffer and does not require the

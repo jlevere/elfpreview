@@ -13,7 +13,7 @@ pub fn parse_elf(data: &[u8]) -> Result<crate::model::ElfDetails, String> {
 
             Ok(info)
         }
-        Err(e) => Err(format!("{:?}", e)),
+        Err(e) => Err(format!("{e:?}")),
     }
 }
 

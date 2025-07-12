@@ -28,7 +28,7 @@ pub fn parse_pe(data: &[u8]) -> Result<crate::model::PeDetails, String> {
 
             Ok(info)
         }
-        Err(e) => Err(format!("{:?}", e)),
+        Err(e) => Err(format!("{e:?}")),
     }
 }
 
@@ -90,7 +90,7 @@ fn get_subsystem_str(subsystem: u16) -> String {
         13 => "EFI ROM".to_string(),
         14 => "XBOX".to_string(),
         16 => "Windows Boot Application".to_string(),
-        _ => format!("Unknown ({})", subsystem),
+        _ => format!("Unknown ({subsystem})"),
     }
 }
 
