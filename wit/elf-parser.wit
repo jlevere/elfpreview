@@ -25,17 +25,11 @@ interface types {
     big,
   }
 
-  // ------------------------------------------------------------------------
-  // Fast identification result (returned by `identify`)
-  // ------------------------------------------------------------------------
-  record basic-info {
-    format: format,
-    arch: string,          // e.g. "x86", "x86_64", "arm", "riscv" …
-    bitness: bitness,
-    endianness: endianness,
-    file-type: string,     // Executable, Relocatable, Shared, Core … (string keeps this open-ended)
-    entry-point: option<u64>,
-    stripped: bool,
+  variant file-kind {
+    elf,
+    pe,
+    mach,
+    other(string),
   }
 
   // ------------------------------------------------------------------------
@@ -151,10 +145,10 @@ interface types {
 // Public inspector interface
 // --------------------------------------------------------------------------
 interface inspector {
-  use types.{basic-info, details};
+  use types.{file-kind, details};
 
   /// Fast identification based only on the container header (akin to the `file` utility).
-  identify: func(data: list<u8>) -> result<basic-info, string>;
+  identify: func(data: list<u8>) -> result<file-kind, string>;
 
   /// Full parse of the binary, returning format-specific information.
   /// The caller should typically invoke `identify` first and only call this

@@ -17,16 +17,6 @@ pub fn parse_elf(data: &[u8]) -> Result<crate::model::ElfDetails, String> {
     }
 }
 
-// A lightweight header-only parse used by quick_identify so we don’t have to
-// pull all sections/symbols unless the caller asks for a full parse.
-pub fn parse_elf_header(data: &[u8]) -> Result<crate::model::BasicInfo, String> {
-    match goblin::Object::parse(data) {
-        Ok(goblin::Object::Elf(elf)) => crate::utils::build_basic_info("ELF", &elf),
-        Ok(_) => Err("Not an ELF binary".into()),
-        Err(e) => Err(e.to_string()),
-    }
-}
-
 fn build_section_info(elf: &Elf) -> Vec<wit_types::ElfSectionInfo> {
     elf.section_headers
         .iter()

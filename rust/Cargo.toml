@@ -8,6 +8,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 goblin = "0.10.0"
+infer = "0.19.0"
 scroll = "0.13.0"
 wit-bindgen = "0.43.0"
 

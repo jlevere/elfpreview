@@ -32,14 +32,6 @@ pub fn parse_pe(data: &[u8]) -> Result<crate::model::PeDetails, String> {
     }
 }
 
-pub fn parse_pe_header(data: &[u8]) -> Result<crate::model::BasicInfo, String> {
-    match goblin::Object::parse(data) {
-        Ok(goblin::Object::PE(pe)) => crate::utils::build_basic_info_pe("PE", &pe),
-        Ok(_) => Err("Not a PE binary".into()),
-        Err(e) => Err(e.to_string()),
-    }
-}
-
 fn build_section_info(pe: &PE) -> Vec<wit_types::PeSectionInfo> {
     pe.sections
         .iter()

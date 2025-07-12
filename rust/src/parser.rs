@@ -2,17 +2,27 @@ use crate::model;
 use crate::{elf, mach, pe};
 use goblin::Object;
 
-pub fn quick_identify(data: &[u8]) -> Result<model::BasicInfo, String> {
-    match Object::parse(data) {
-        Ok(obj) => match obj {
-            Object::Elf(_) => elf::parse_elf_header(data),
-            Object::PE(_) => pe::parse_pe_header(data),
-            Object::Mach(_) => mach::parse_mach_header(data),
-            Object::Archive(_) => Ok(crate::utils::build_generic_basic_info("Archive")),
-            Object::Unknown(magic) => Err(format!("Unknown binary format: {magic:x?}")),
-            _ => Ok(crate::utils::build_generic_basic_info("Unknown")),
-        },
-        Err(e) => Err(format!("Failed to parse binary: {e}")),
+/// Perform a very fast type identification based on container headers or
+/// generic magic-byte signatures.
+pub fn quick_identify(data: &[u8]) -> Result<model::FileKind, String> {
+    // Fast path via `goblin` for the formats we actually support deeply.
+    if let Ok(obj) = Object::parse(data) {
+        return match obj {
+            Object::Elf(_) => Ok(model::FileKind::Elf),
+            Object::PE(_) => Ok(model::FileKind::Pe),
+            Object::Mach(_) => Ok(model::FileKind::Mach),
+            _ => identify_with_infer(data),
+        };
+    }
+
+    // If goblin itself failed to parse, still try to guess using `infer`.
+    identify_with_infer(data)
+}
+
+fn identify_with_infer(data: &[u8]) -> Result<model::FileKind, String> {
+    match infer::get(data) {
+        Some(kind) => Ok(model::FileKind::Other(kind.mime_type().to_string())),
+        None => Ok(model::FileKind::Other("unknown".into())),
     }
 }
 

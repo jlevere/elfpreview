@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u64, u32, u16, i32, i64, ptr, result } from '@vscode/wasm-component-model';
+import type { u64, u32, u16, i32, ptr, result, i64 } from '@vscode/wasm-component-model';
 
 export namespace Types {
 	/**
@@ -36,28 +36,65 @@ export namespace Types {
 		big = 'big'
 	}
 
-	/**
-	 * ------------------------------------------------------------------------
-	 * Fast identification result (returned by `identify`)
-	 * ------------------------------------------------------------------------
-	 */
-	export type BasicInfo = {
-		format: Format;
-		arch: string;
+	export namespace FileKind {
+		export const elf = 'elf' as const;
+		export type Elf = { readonly tag: typeof elf } & _common;
+		export function Elf(): Elf {
+			return new VariantImpl(elf, undefined) as Elf;
+		}
 
-		/**
-		 * e.g. "x86", "x86_64", "arm", "riscv" …
-		 */
-		bitness: Bitness;
-		endianness: Endianness;
-		fileType: string;
+		export const pe = 'pe' as const;
+		export type Pe = { readonly tag: typeof pe } & _common;
+		export function Pe(): Pe {
+			return new VariantImpl(pe, undefined) as Pe;
+		}
 
-		/**
-		 * Executable, Relocatable, Shared, Core … (string keeps this open-ended)
-		 */
-		entryPoint?: u64 | undefined;
-		stripped: boolean;
-	};
+		export const mach = 'mach' as const;
+		export type Mach = { readonly tag: typeof mach } & _common;
+		export function Mach(): Mach {
+			return new VariantImpl(mach, undefined) as Mach;
+		}
+
+		export const other = 'other' as const;
+		export type Other = { readonly tag: typeof other; readonly value: string } & _common;
+		export function Other(value: string): Other {
+			return new VariantImpl(other, value) as Other;
+		}
+
+		export type _tt = typeof elf | typeof pe | typeof mach | typeof other;
+		export type _vt = string | undefined;
+		type _common = Omit<VariantImpl, 'tag' | 'value'>;
+		export function _ctor(t: _tt, v: _vt): FileKind {
+			return new VariantImpl(t, v) as FileKind;
+		}
+		class VariantImpl {
+			private readonly _tag: _tt;
+			private readonly _value?: _vt;
+			constructor(t: _tt, value: _vt) {
+				this._tag = t;
+				this._value = value;
+			}
+			get tag(): _tt {
+				return this._tag;
+			}
+			get value(): _vt {
+				return this._value;
+			}
+			isElf(): this is Elf {
+				return this._tag === FileKind.elf;
+			}
+			isPe(): this is Pe {
+				return this._tag === FileKind.pe;
+			}
+			isMach(): this is Mach {
+				return this._tag === FileKind.mach;
+			}
+			isOther(): this is Other {
+				return this._tag === FileKind.other;
+			}
+		}
+	}
+	export type FileKind = FileKind.Elf | FileKind.Pe | FileKind.Mach | FileKind.Other;
 
 	/**
 	 * ------------------------------------------------------------------------
@@ -241,7 +278,8 @@ export type Types = {
  * --------------------------------------------------------------------------
  */
 export namespace Inspector {
-	export type BasicInfo = Types.BasicInfo;
+	export type FileKind = Types.FileKind;
+	export const FileKind = Types.FileKind;
 
 	export type Details = Types.Details;
 	export const Details = Types.Details;
@@ -251,7 +289,7 @@ export namespace Inspector {
 	 *
 	 * @throws $wcm.wstring.Error
 	 */
-	export type identify = (data: Uint8Array) => BasicInfo;
+	export type identify = (data: Uint8Array) => FileKind;
 
 	/**
 	 * Full parse of the binary, returning format-specific information.
@@ -290,15 +328,7 @@ export namespace Types.$ {
 	export const Format = new $wcm.EnumType<Types.Format>(['elf', 'pe', 'mach', 'unknown']);
 	export const Bitness = new $wcm.EnumType<Types.Bitness>(['bits32', 'bits64']);
 	export const Endianness = new $wcm.EnumType<Types.Endianness>(['little', 'big']);
-	export const BasicInfo = new $wcm.RecordType<Types.BasicInfo>([
-		['format', Format],
-		['arch', $wcm.wstring],
-		['bitness', Bitness],
-		['endianness', Endianness],
-		['fileType', $wcm.wstring],
-		['entryPoint', new $wcm.OptionType<u64>($wcm.u64)],
-		['stripped', $wcm.bool],
-	]);
+	export const FileKind = new $wcm.VariantType<Types.FileKind, Types.FileKind._tt, Types.FileKind._vt>([['elf', undefined], ['pe', undefined], ['mach', undefined], ['other', $wcm.wstring]], Types.FileKind._ctor);
 	export const ElfSectionInfo = new $wcm.RecordType<Types.ElfSectionInfo>([
 		['name', $wcm.wstring],
 		['size', $wcm.u64],
@@ -385,7 +415,7 @@ export namespace Types._ {
 		['Format', $.Format],
 		['Bitness', $.Bitness],
 		['Endianness', $.Endianness],
-		['BasicInfo', $.BasicInfo],
+		['FileKind', $.FileKind],
 		['ElfSectionInfo', $.ElfSectionInfo],
 		['ElfProgramHeader', $.ElfProgramHeader],
 		['ElfSymbolInfo', $.ElfSymbolInfo],
@@ -405,11 +435,11 @@ export namespace Types._ {
 }
 
 export namespace Inspector.$ {
-	export const BasicInfo = Types.$.BasicInfo;
+	export const FileKind = Types.$.FileKind;
 	export const Details = Types.$.Details;
 	export const identify = new $wcm.FunctionType<Inspector.identify>('identify',[
 		['data', new $wcm.Uint8ArrayType()],
-	], new $wcm.ResultType<Inspector.BasicInfo, string>(BasicInfo, $wcm.wstring, $wcm.wstring.Error));
+	], new $wcm.ResultType<Inspector.FileKind, string>(FileKind, $wcm.wstring, $wcm.wstring.Error));
 	export const parse = new $wcm.FunctionType<Inspector.parse>('parse',[
 		['data', new $wcm.Uint8ArrayType()],
 	], new $wcm.ResultType<Inspector.Details, string>(Details, $wcm.wstring, $wcm.wstring.Error));
@@ -418,7 +448,7 @@ export namespace Inspector._ {
 	export const id = 'bininspect:api/inspector' as const;
 	export const witName = 'inspector' as const;
 	export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
-		['BasicInfo', $.BasicInfo],
+		['FileKind', $.FileKind],
 		['Details', $.Details]
 	]);
 	export const functions: Map<string, $wcm.FunctionType> = new Map([
@@ -426,7 +456,7 @@ export namespace Inspector._ {
 		['parse', $.parse]
 	]);
 	export type WasmInterface = {
-		'identify': (data_ptr: i32, data_len: i32, result: ptr<result<BasicInfo, string>>) => void;
+		'identify': (data_ptr: i32, data_len: i32, result: ptr<result<FileKind, string>>) => void;
 		'parse': (data_ptr: i32, data_len: i32, result: ptr<result<Details, string>>) => void;
 	};
 	export namespace imports {
@@ -463,7 +493,7 @@ export namespace bininspect._ {
 		}
 	}
 	export type Exports = {
-		'bininspect:api/inspector#identify': (data_ptr: i32, data_len: i32, result: ptr<result<Inspector.BasicInfo, string>>) => void;
+		'bininspect:api/inspector#identify': (data_ptr: i32, data_len: i32, result: ptr<result<Inspector.FileKind, string>>) => void;
 		'bininspect:api/inspector#parse': (data_ptr: i32, data_len: i32, result: ptr<result<Inspector.Details, string>>) => void;
 	};
 	export function bind(service: bininspect.Imports, code: $wcm.Code, context?: $wcm.ComponentModelContext): Promise<bininspect.Exports>;

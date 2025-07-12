@@ -17,12 +17,11 @@ use bindings::exports::bininspect::api::inspector::Guest;
 
 mod elf;
 mod pe;
-mod utils;
 
 pub struct BinaryParser;
 
 impl Guest for BinaryParser {
-    fn identify(data: Vec<u8>) -> Result<crate::model::BasicInfo, String> {
+    fn identify(data: Vec<u8>) -> Result<crate::model::FileKind, String> {
         parser::quick_identify(&data)
     }
 
@@ -36,7 +35,7 @@ bindings::export!(BinaryParser with_types_in bindings);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bindings::bininspect::api::types::Format;
+    use crate::bindings::bininspect::api::types::FileKind;
     use std::fs;
     use std::path::Path;
 
@@ -51,7 +50,7 @@ mod tests {
         let elf_data = load_test_file("simple_test");
         let result = BinaryParser::identify(elf_data);
         assert!(result.is_ok());
-        let info = result.unwrap();
-        assert_eq!(info.format, Format::Elf);
+        let kind = result.unwrap();
+        assert!(matches!(kind, FileKind::Elf));
     }
 }
