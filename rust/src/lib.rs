@@ -35,7 +35,7 @@ bindings::export!(BinaryParser with_types_in bindings);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bindings::bininspect::api::types::FileKind;
+    use crate::bindings::bininspect::api::types::{FileKind, Format};
     use std::fs;
     use std::path::Path;
 
@@ -51,6 +51,6 @@ mod tests {
         let result = BinaryParser::identify(elf_data);
         assert!(result.is_ok());
         let kind = result.unwrap();
-        assert!(matches!(kind, FileKind::Elf));
+        assert!(matches!(kind, FileKind::Known(Format::Elf)));
     }
 }

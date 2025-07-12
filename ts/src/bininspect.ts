@@ -37,22 +37,10 @@ export namespace Types {
 	}
 
 	export namespace FileKind {
-		export const elf = 'elf' as const;
-		export type Elf = { readonly tag: typeof elf } & _common;
-		export function Elf(): Elf {
-			return new VariantImpl(elf, undefined) as Elf;
-		}
-
-		export const pe = 'pe' as const;
-		export type Pe = { readonly tag: typeof pe } & _common;
-		export function Pe(): Pe {
-			return new VariantImpl(pe, undefined) as Pe;
-		}
-
-		export const mach = 'mach' as const;
-		export type Mach = { readonly tag: typeof mach } & _common;
-		export function Mach(): Mach {
-			return new VariantImpl(mach, undefined) as Mach;
+		export const known = 'known' as const;
+		export type Known = { readonly tag: typeof known; readonly value: Format } & _common;
+		export function Known(value: Format): Known {
+			return new VariantImpl(known, value) as Known;
 		}
 
 		export const other = 'other' as const;
@@ -61,8 +49,14 @@ export namespace Types {
 			return new VariantImpl(other, value) as Other;
 		}
 
-		export type _tt = typeof elf | typeof pe | typeof mach | typeof other;
-		export type _vt = string | undefined;
+		export const unknown = 'unknown' as const;
+		export type Unknown = { readonly tag: typeof unknown } & _common;
+		export function Unknown(): Unknown {
+			return new VariantImpl(unknown, undefined) as Unknown;
+		}
+
+		export type _tt = typeof known | typeof other | typeof unknown;
+		export type _vt = Format | string | undefined;
 		type _common = Omit<VariantImpl, 'tag' | 'value'>;
 		export function _ctor(t: _tt, v: _vt): FileKind {
 			return new VariantImpl(t, v) as FileKind;
@@ -80,21 +74,18 @@ export namespace Types {
 			get value(): _vt {
 				return this._value;
 			}
-			isElf(): this is Elf {
-				return this._tag === FileKind.elf;
-			}
-			isPe(): this is Pe {
-				return this._tag === FileKind.pe;
-			}
-			isMach(): this is Mach {
-				return this._tag === FileKind.mach;
+			isKnown(): this is Known {
+				return this._tag === FileKind.known;
 			}
 			isOther(): this is Other {
 				return this._tag === FileKind.other;
 			}
+			isUnknown(): this is Unknown {
+				return this._tag === FileKind.unknown;
+			}
 		}
 	}
-	export type FileKind = FileKind.Elf | FileKind.Pe | FileKind.Mach | FileKind.Other;
+	export type FileKind = FileKind.Known | FileKind.Other | FileKind.Unknown;
 
 	/**
 	 * ------------------------------------------------------------------------
@@ -328,7 +319,7 @@ export namespace Types.$ {
 	export const Format = new $wcm.EnumType<Types.Format>(['elf', 'pe', 'mach', 'unknown']);
 	export const Bitness = new $wcm.EnumType<Types.Bitness>(['bits32', 'bits64']);
 	export const Endianness = new $wcm.EnumType<Types.Endianness>(['little', 'big']);
-	export const FileKind = new $wcm.VariantType<Types.FileKind, Types.FileKind._tt, Types.FileKind._vt>([['elf', undefined], ['pe', undefined], ['mach', undefined], ['other', $wcm.wstring]], Types.FileKind._ctor);
+	export const FileKind = new $wcm.VariantType<Types.FileKind, Types.FileKind._tt, Types.FileKind._vt>([['known', Format], ['other', $wcm.wstring], ['unknown', undefined]], Types.FileKind._ctor);
 	export const ElfSectionInfo = new $wcm.RecordType<Types.ElfSectionInfo>([
 		['name', $wcm.wstring],
 		['size', $wcm.u64],
@@ -493,8 +484,8 @@ export namespace bininspect._ {
 		}
 	}
 	export type Exports = {
-		'bininspect:api/inspector#identify': (data_ptr: i32, data_len: i32, result: ptr<result<Inspector.FileKind, string>>) => void;
-		'bininspect:api/inspector#parse': (data_ptr: i32, data_len: i32, result: ptr<result<Inspector.Details, string>>) => void;
+		'bininspect:api/inspector#identify': (data_ptr: i32, data_len: i32, result: ptr<result<Types.FileKind, string>>) => void;
+		'bininspect:api/inspector#parse': (data_ptr: i32, data_len: i32, result: ptr<result<Types.Details, string>>) => void;
 	};
 	export function bind(service: bininspect.Imports, code: $wcm.Code, context?: $wcm.ComponentModelContext): Promise<bininspect.Exports>;
 	export function bind(service: bininspect.Imports.Promisified, code: $wcm.Code, port: $wcm.RAL.ConnectionPort, context?: $wcm.ComponentModelContext): Promise<bininspect.Exports.Promisified>;

@@ -26,10 +26,9 @@ interface types {
   }
 
   variant file-kind {
-    elf,
-    pe,
-    mach,
+    known(format),
     other(string),
+    unknown,
   }
 
   // ------------------------------------------------------------------------

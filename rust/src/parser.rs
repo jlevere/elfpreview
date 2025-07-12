@@ -1,28 +1,31 @@
-use crate::model;
+use crate::model::{self, Format};
 use crate::{elf, mach, pe};
 use goblin::Object;
+use infer;
 
-/// Perform a very fast type identification based on container headers or
-/// generic magic-byte signatures.
+/// Perform a very fast type identification using `infer` magic-number matchers only.
+/// This works on the first few kB of the buffer and does not require the
+/// entire binary.
 pub fn quick_identify(data: &[u8]) -> Result<model::FileKind, String> {
-    // Fast path via `goblin` for the formats we actually support deeply.
-    if let Ok(obj) = Object::parse(data) {
-        return match obj {
-            Object::Elf(_) => Ok(model::FileKind::Elf),
-            Object::PE(_) => Ok(model::FileKind::Pe),
-            Object::Mach(_) => Ok(model::FileKind::Mach),
-            _ => identify_with_infer(data),
-        };
-    }
-
-    // If goblin itself failed to parse, still try to guess using `infer`.
-    identify_with_infer(data)
-}
-
-fn identify_with_infer(data: &[u8]) -> Result<model::FileKind, String> {
     match infer::get(data) {
-        Some(kind) => Ok(model::FileKind::Other(kind.mime_type().to_string())),
-        None => Ok(model::FileKind::Other("unknown".into())),
+        Some(kind) => {
+            let mime = kind.mime_type();
+            let fk = match mime {
+                // ELF
+                "application/x-executable" => model::FileKind::Known(Format::Elf),
+                // PE (DLL/EXE share the same MIME string in `infer`)
+                "application/vnd.microsoft.portable-executable" => {
+                    model::FileKind::Known(Format::Pe)
+                }
+                // Mach-O
+                "application/x-mach-binary" => model::FileKind::Known(Format::Mach),
+                // Anything else still recognised by `infer`
+                other => model::FileKind::Other(other.to_string()),
+            };
+            Ok(fk)
+        }
+        // `infer` could not recognise the buffer at all
+        None => Ok(model::FileKind::Unknown),
     }
 }
 
