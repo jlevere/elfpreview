@@ -3,4 +3,4 @@ build
 coverage
 
 dist/**
-ts/src/elfpreview.ts
+ts/src/bininspect.ts

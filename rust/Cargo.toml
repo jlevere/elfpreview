@@ -1,5 +1,5 @@
 [package]
-name = "elfpreview"
+name = "bininspect"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,10 +7,11 @@ edition = "2021"
 crate-type = ["cdylib"] 
 
 [dependencies]
-goblin = "0.9.3"
-scroll = "0.12.0"
-wit-bindgen = "0.41.0"
+goblin = "0.10.0"
+infer = "0.19.0"
+scroll = "0.13.0"
+wit-bindgen = "0.43.0"
 
 
 [package.metadata.component]
-package = "elfpreview:parser"
+package = "bininspect:api"

@@ -1,0 +1,262 @@
+body {
+  font-family: var(--vscode-editor-font-family);
+  padding: 0;
+  margin: 0;
+  color: var(--vscode-editor-foreground);
+  background-color: var(--vscode-editor-background);
+}
+
+.container {
+  padding: 20px;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--vscode-editor-foreground);
+  border-bottom: 1px solid var(--vscode-panel-border);
+  padding-bottom: 5px;
+}
+
+/* Tables */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+th,
+td {
+  border: 1px solid var(--vscode-panel-border);
+  padding: 8px;
+  text-align: left;
+}
+
+th {
+  background-color: var(--vscode-panel-background);
+}
+
+tr:nth-child(even) {
+  background-color: var(--vscode-list-inactiveSelectionBackground);
+}
+
+/* Tabs */
+
+.tab {
+  overflow: hidden;
+  border: 1px solid var(--vscode-panel-border);
+  background-color: var(--vscode-panel-background);
+}
+
+.tab button {
+  background-color: inherit;
+  color: var(--vscode-editor-foreground);
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 10px 16px;
+  transition: 0.3s;
+}
+
+.tab button.active {
+  background-color: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
+.tabcontent {
+  display: none;
+  padding: 6px 12px;
+  border: 1px solid var(--vscode-panel-border);
+  border-top: none;
+}
+
+.tabcontent.active {
+  display: block;
+}
+
+/* File info grid */
+
+.file-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.file-metadata {
+  margin-bottom: 20px;
+}
+
+/* Badges */
+
+.badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  margin-left: 10px;
+  font-size: 12px;
+  background-color: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+}
+
+.debug-symbols {
+  color: black;
+  background-color: var(--vscode-debugIcon-startForeground);
+}
+
+/* Inputs */
+
+input[type="text"] {
+  background-color: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  padding: 8px 12px;
+  color: var(--vscode-editor-foreground);
+  margin-bottom: 10px;
+  border-radius: 4px;
+  width: 100px;
+}
+
+input[type="text"]:focus {
+  border: 1px solid var(--vscode-focusBorder);
+  box-shadow: 0 0 4px var(--vscode-focusBorder);
+}
+
+/* Virtual table */
+
+.virtual-table-container {
+  width: 100%;
+  border: 1px solid var(--vscode-panel-border, #333333);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.table-header,
+.table-row {
+  display: flex;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.table-header {
+  background-color: var(--vscode-editor-lineHighlightBackground, #2a2d2e);
+  font-weight: 500;
+  border-bottom: 1px solid var(--vscode-panel-border, #333333);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.table-header > div,
+.table-row > div {
+  padding: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table-row {
+  border-bottom: 1px solid var(--vscode-panel-border, #333333);
+}
+
+.table-row:hover {
+  background-color: var(--vscode-list-hoverBackground, #2a2d2e);
+}
+
+.virtual-table-container .svelte-virtuallist {
+  width: 100% !important;
+}
+
+.virtual-table-container .svelte-virtuallist-contents {
+  width: 100% !important;
+}
+
+@media (max-width: 768px) {
+  .file-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Column widths */
+
+.name-col {
+  flex: 2;
+  min-width: 150px;
+}
+
+.type-col {
+  flex: 1.5;
+  min-width: 90px;
+  max-width: 120px;
+}
+
+.addr-col {
+  flex: 1;
+  min-width: 100px;
+}
+
+.flags-col {
+  flex: 0.8;
+  min-width: 80px;
+}
+
+.vaddr-col,
+.paddr-col {
+  flex: 1;
+  min-width: 100px;
+}
+
+.filesz-col,
+.memsz-col {
+  flex: 0.8;
+  min-width: 80px;
+}
+
+.flags-col {
+  width: 15%;
+  min-width: 60px;
+}
+
+.vaddr-col,
+.paddr-col {
+  width: 20%;
+  min-width: 100px;
+}
+
+.filesz-col,
+.memsz-col {
+  width: 15%;
+  min-width: 80px;
+}
+
+.sym-value-col {
+  width: 10%;
+  min-width: 80px;
+  max-width: 110px;
+}
+
+.vis-col,
+.sym-type-col {
+  width: 8%;
+  min-width: 40px;
+  max-width: 60px;
+  text-align: left;
+}
+
+.size-col,
+.bind-col {
+  width: 8%;
+  min-width: 40px;
+  max-width: 60px;
+  text-align: right;
+}
+
+.error-banner {
+  color: var(--vscode-errorForeground);
+  padding: 8px 0;
+}
+
+.vlist {
+  height: 350px;
+  width: 100%;
+} 
