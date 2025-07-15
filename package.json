@@ -4,7 +4,7 @@
   "description": "Preview ELF binary files in VS Code",
   "publisher": "jlevere",
   "author": "https://github.com/jlevere",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "keywords": [
     "VSCode",
     "Elf",
@@ -29,7 +29,7 @@
   },
   "homepage": "https://github.com/jlevere/elfpreview#readme",
   "engines": {
-    "vscode": "^1.98.0",
+    "vscode": "^1.102.0",
     "node": "^v22.13.1"
   },
   "activationEvents": [
