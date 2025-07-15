@@ -1,6 +1,6 @@
 <script lang="ts">
   import { VirtualList } from "svelte-virtuallists";
-  import { convertToBase16 } from "../utils";
+  import { convertToBase16 } from "../../utils";
   import type { Types } from "@bininspect";
 
   export let mach: Types.MachDetails;

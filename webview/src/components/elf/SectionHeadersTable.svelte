@@ -1,7 +1,7 @@
 <script lang="ts">
   import { VirtualList } from "svelte-virtuallists";
   import type { Types } from "@bininspect";
-  import { convertToBase16 } from "../utils";
+  import { convertToBase16 } from "../../utils";
 
   export let sections: Types.ElfSectionInfo[] = [];
 </script>
