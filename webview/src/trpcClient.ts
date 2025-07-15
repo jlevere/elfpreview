@@ -15,6 +15,12 @@ const vsLink: TRPCLink<AppRouter> = () => {
 
   return ({ op }) =>
     observable<unknown>((observer) => {
+      // Defensive: Ensure op.type is defined
+      if (!op || typeof op.type !== "string") {
+        console.error("tRPC op.type is missing or not a string", op);
+        observer.error(new Error("Internal error: tRPC op.type is missing"));
+        return () => {};
+      }
       // Re‑use the id tRPC generated for this op
       const { id } = op;
 
@@ -30,6 +36,7 @@ const vsLink: TRPCLink<AppRouter> = () => {
       };
 
       const listener = (ev: MessageEvent) => {
+        // Only process messages that match our tRPC envelope
         if (!isMine(ev.data)) return;
 
         if ("error" in ev.data) {
@@ -39,8 +46,9 @@ const vsLink: TRPCLink<AppRouter> = () => {
 
         observer.next(superjson.deserialize<unknown>(ev.data.result));
 
-        // Close after first payload for non-streaming operations
-        if (op.type !== "subscription") observer.complete();
+        // Defensive: Only access op.type if op is defined and is a string
+        if (op && typeof op.type === "string" && op.type !== "subscription")
+          observer.complete();
       };
 
       window.addEventListener("message", listener);

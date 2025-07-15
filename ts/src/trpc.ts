@@ -92,23 +92,28 @@ export function attachPanelTransport(panel: WebviewPanel, ctx: PanelContext) {
     );
   };
 
-  const postResult = (id: number, data: unknown) => {
+  const postResult = (id: number, type: string, data: unknown) => {
     panel.webview.postMessage({
       __trpc: true,
       id,
+      type,
       result: superjson.serialize(data),
     });
   };
-  const postError = (id: number, err: unknown) => {
+  const postError = (id: number, type: string, err: unknown) => {
     panel.webview.postMessage({
       __trpc: true,
       id,
+      type,
       error: superjson.serialize(err),
     });
   };
 
   panel.webview.onDidReceiveMessage(async (raw) => {
-    if (!isRpcRequest(raw)) return;
+    if (!isRpcRequest(raw)) {
+      console.warn("Received non-RPC message or missing type field", raw);
+      return;
+    }
 
     const { id } = raw;
 
@@ -116,11 +121,14 @@ export function attachPanelTransport(panel: WebviewPanel, ctx: PanelContext) {
       case "query":
         try {
           const result = await caller.getInitialState();
-          postResult(id, result);
+          postResult(id, raw.type, result);
         } catch (e) {
           postError(
             id,
-            e instanceof Error ? e.message : "An unknown error occurred",
+            raw.type,
+            String(
+              e instanceof Error ? e.message : "An unknown error occurred",
+            ),
           );
         }
         break;
@@ -135,12 +143,13 @@ export function attachPanelTransport(panel: WebviewPanel, ctx: PanelContext) {
         void (async () => {
           try {
             for await (const data of stream) {
-              postResult(id, data);
+              postResult(id, raw.type, data);
             }
           } catch (err) {
             postError(
               id,
-              err instanceof Error ? err.message : "Subscription error",
+              raw.type,
+              String(err instanceof Error ? err.message : "Subscription error"),
             );
           }
         })();
@@ -153,10 +162,22 @@ export function attachPanelTransport(panel: WebviewPanel, ctx: PanelContext) {
         break;
 
       default: {
-        const unhandled: never = raw;
+        function getType(val: unknown): string {
+          if (
+            val &&
+            typeof val === "object" &&
+            "type" in val &&
+            typeof (val as { type: unknown }).type === "string"
+          ) {
+            return (val as { type: string }).type;
+          }
+          return "unknown";
+        }
+        const type = getType(raw);
         postError(
           id,
-          `Unhandled message type: ${(unhandled as RpcRequest).type}`,
+          type,
+          String(`Unhandled message type: ${JSON.stringify(raw)}`),
         );
         break;
       }
