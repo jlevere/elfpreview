@@ -84,9 +84,9 @@
     "esbuild": "node esbuild.js",
     "esbuild:prod": "node esbuild.js --production",
     "watch:esbuild": "pnpm esbuild --watch",
-    "compile:rust": "pnpm prepare-dist && pnpm exec cargo build --manifest-path rust/Cargo.toml --release --target wasm32-unknown-unknown && pnpm exec cp --update rust/target/wasm32-unknown-unknown/release/*.wasm dist/",
+    "compile:rust": "pnpm prepare-dist && pnpm exec cargo build --release --target wasm32-unknown-unknown && pnpm exec cp --update target/wasm32-unknown-unknown/release/*.wasm dist/",
     "lint": "pnpm exec eslint ./ts/src ./webview/src",
-    "test": "pnpm exec cargo test --manifest-path rust/Cargo.toml",
+    "test": "pnpm exec cargo test",
     "generate:wit": "pnpm exec wit2ts --outDir ./ts/src ./wit/elf-parser.wit",
     "vsce:package": "pnpm exec vsce package",
     "vsce:publish": "pnpm exec vsce publish"
@@ -96,10 +96,10 @@
     "@sveltejs/eslint-config": "^8.2.0",
     "@tsconfig/svelte": "5",
     "@types/mocha": "^10.0.10",
-    "@types/node": "~20.17.25",
+    "@types/node": "~24.0.14",
     "@types/vscode": "^1.98.0",
-    "@typescript-eslint/eslint-plugin": "^8.27.0",
-    "@vscode/test-cli": "^0.0.10",
+    "@typescript-eslint/eslint-plugin": "^8.37.0",
+    "@vscode/test-cli": "^0.0.11",
     "@vscode/vsce": "^3.3.1",
     "@vscode/wasm-component-model": "^1.0.1",
     "esbuild": "^0.25.1",
@@ -112,12 +112,12 @@
     "prettier": "^3.5.3",
     "prettier-plugin-svelte": "^3.3.3",
     "rimraf": "^6.0.1",
-    "svelte": "^5.0.0",
+    "svelte": "^5.36.1",
     "svelte-check": "^4.1.5",
     "svelte-preprocess": "^6.0.3",
     "svelte-virtuallists": "^1.4.2",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.28.0"
+    "typescript-eslint": "^8.37.0"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

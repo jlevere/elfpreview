@@ -197,14 +197,12 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
         });
       }
 
-      /* eslint-disable @typescript-eslint/no-unsafe-assignment */
       if (parsedData.dynlink) {
         webviewPanel.webview.postMessage({
           type: "dyn-info",
           data: parsedData.dynlink,
         });
       }
-      /* eslint-enable @typescript-eslint/no-unsafe-assignment */
 
       if (parsedData.sectionheaders) {
         webviewPanel.webview.postMessage({
