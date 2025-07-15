@@ -4,7 +4,7 @@ import * as fs from "node:fs/promises";
 /**
  * Class to support partial file reads for vscode
  */
-export class ElfFileReader {
+export class PartialFileReader {
   private filePath: string;
 
   constructor(uri: vscode.Uri) {

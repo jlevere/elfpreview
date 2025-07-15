@@ -18,6 +18,12 @@
     },
     "types": ["svelte"]
   },
-  "include": ["src/**/*.ts", "src/**/*.svelte", "../ts/src/bininspect.ts"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.svelte",
+    "src/components/**/*.svelte",
+    "../ts/src/bininspect.ts",
+    "../ts/src/trpc.ts"
+  ],
   "exclude": ["node_modules"]
 }

@@ -1,55 +1,44 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import type { Types } from "@bininspect";
-  import ElfDetails from "./components/ElfDetails.svelte";
-  import PeDetails from "./components/PeDetails.svelte";
-  import MachDetails from "./components/MachDetails.svelte";
-  import { convertToBase16 } from "./utils";
+  import ElfDetails from "./components/elf/ElfDetails.svelte";
+  import PeDetails from "./components/pe/PeDetails.svelte";
+  import MachDetails from "./components/mach/MachDetails.svelte";
 
-  const {
-    initialData,
-  }: { initialData: { filename?: string; basicInfo?: Types.BasicInfo } } =
-    $props();
+  import { trpc } from "./trpcClient";
+  import type { PanelContext } from "../../ts/src/trpc";
+
+  const { initialData }: { initialData: { filename?: string } } = $props();
 
   const filename = initialData.filename || "Unknown Binary";
-  let basicInfo = $state<Types.BasicInfo | null>(initialData.basicInfo || null);
+  let fileKind = $state<string | null>(null);
   let details = $state<Types.Details | null>(null);
   let parseComplete = $state(false);
   let magicBytes = $state<string | null>(null);
   let errorMsg = $state<string | null>(null);
 
-  type MessageType =
-    | "basic-info"
-    | "details"
-    | "magic-bytes"
-    | "parse-complete"
-    | "error";
-  type Payload = { type: MessageType; data?: unknown; error?: string };
-
-  function handleMessage(event: MessageEvent<Payload>) {
-    const { type, data } = event.data;
-    switch (type) {
-      case "basic-info":
-        basicInfo = data as Types.BasicInfo;
-        break;
-      case "details":
-        details = data as Types.Details;
-        break;
-      case "parse-complete":
-        parseComplete = true;
-        break;
-      case "magic-bytes":
-        magicBytes = data as string;
-        break;
-      case "error":
-        errorMsg = event.data.error ?? "Unknown error";
-        break;
-    }
+  function updateState(state: PanelContext["state"]) {
+    fileKind = state.fileKind?.tag ?? null;
+    details = state.details ?? null;
+    parseComplete = state.parseComplete ?? false;
+    magicBytes = state.magicBytes ?? null;
+    errorMsg = state.error ?? null;
   }
 
   onMount(() => {
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
+    void trpc.getInitialState
+      .query()
+      .then(updateState)
+      .catch((e: unknown) => {
+        errorMsg = (e as Error).message;
+      });
+
+    const sub = trpc.onStateChange.subscribe(undefined, {
+      onData: updateState,
+      onError: (e) => (errorMsg = (e as Error).message),
+    });
+
+    return () => sub.unsubscribe();
   });
 </script>
 
@@ -62,18 +51,7 @@
       <div class="file-metadata">
         <table>
           <thead>
-            <tr><th>Format:</th><td>{basicInfo?.format}</td></tr>
-            <tr><th>Arch:</th><td>{basicInfo?.arch}</td></tr>
-            <tr><th>Bitness:</th><td>{basicInfo?.bitness}</td></tr>
-            <tr><th>Endianness:</th><td>{basicInfo?.endianness}</td></tr>
-            <tr><th>Type:</th><td>{basicInfo?.fileType}</td></tr>
-            {#if basicInfo?.entryPoint != null}
-              <tr
-                ><th>Entry Point:</th><td
-                  >0x{convertToBase16(basicInfo.entryPoint, "")}</td
-                ></tr
-              >
-            {/if}
+            <tr><th>Format:</th><td>{fileKind}</td></tr>
           </thead>
           <tbody></tbody>
         </table>

@@ -1,8 +1,11 @@
 import * as vscode from "vscode";
 import * as path from "node:path";
-import { bininspect, Types } from "./bininspect";
+import { bininspect } from "./bininspect";
 import { WasmContext } from "@vscode/wasm-component-model";
 import { Worker } from "node:worker_threads";
+import { PartialFileReader } from "./fileReader";
+import { attachPanelTransport, type PanelContext } from "./trpc";
+import { EventEmitter } from "node:events";
 
 class ElfPreviewExtension {
   private bininspect?: bininspect.Exports.Promisified;
@@ -18,11 +21,11 @@ class ElfPreviewExtension {
     console.log("ELF Preview extension is now active!");
 
     try {
-      await this.initializeElfParser();
+      await this.initializeParser();
 
-      this.registerElfPreviewProvider();
+      this.registerPreviewProvider();
 
-      this.registerElfPreviewCommand();
+      this.registerPreviewCommand();
     } catch (error) {
       this.handleInitializationError(error);
     }
@@ -32,7 +35,7 @@ class ElfPreviewExtension {
    * Loads the compiled WebAssembly module that implements the `bininspect` world and
    * binds the generated TypeScript interface so it can be used throughout the extension.
    */
-  private async initializeElfParser(): Promise<void> {
+  private async initializeParser(): Promise<void> {
     const wasmPath = vscode.Uri.file(
       path.join(this.context.extensionPath, "./dist", "bininspect.wasm"),
     );
@@ -73,8 +76,8 @@ class ElfPreviewExtension {
     }
   }
 
-  private registerElfPreviewProvider(): void {
-    const elfPreviewProvider = new ElfPreviewProvider(
+  private registerPreviewProvider(): void {
+    const elfPreviewProvider = new PreviewProvider(
       this.context.extensionUri,
       this.bininspect,
     );
@@ -92,7 +95,7 @@ class ElfPreviewExtension {
     );
   }
 
-  private registerElfPreviewCommand(): void {
+  private registerPreviewCommand(): void {
     const disposable = vscode.commands.registerCommand(
       "elfpreview.showPreview",
       async (fileUri?: vscode.Uri) => {
@@ -133,7 +136,7 @@ class ElfPreviewExtension {
   }
 }
 
-class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
+class PreviewProvider implements vscode.CustomReadonlyEditorProvider {
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly bininspect?: bininspect.Exports.Promisified,
@@ -143,10 +146,10 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
     return Promise.resolve({ uri, dispose: () => {} });
   }
 
-  async resolveCustomEditor(
+  resolveCustomEditor(
     document: vscode.CustomDocument,
     webviewPanel: vscode.WebviewPanel,
-  ): Promise<void> {
+  ): void {
     webviewPanel.webview.options = {
       enableScripts: true,
       localResourceRoots: [this.extensionUri],
@@ -155,16 +158,25 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
     try {
       this.validateInspector();
 
-      const filename = this.extractFilename(document.uri);
+      // Provide barebones HTML – the rest of the data flows via tRPC.
+      this.setupWebview(webviewPanel, this.extractFilename(document.uri));
 
-      // Read the entire file once
-      const fileData = await vscode.workspace.fs.readFile(document.uri);
+      // Create per-panel tRPC context & transport bridge.
+      const ctx: PanelContext = {
+        state: {
+          fileKind: null,
+          details: null,
+          magicBytes: null,
+          parseComplete: false,
+          error: null,
+        },
+        events: new EventEmitter(),
+      };
 
-      // Setup the webview with filename only – full details will arrive asynchronously
-      this.setupWebview(webviewPanel, filename);
+      attachPanelTransport(webviewPanel, ctx);
 
-      // Begin the asynchronous parsing process which will post results to the web-view
-      await this.startAsyncParsing(webviewPanel, fileData);
+      // Start async parsing without blocking web-view initialisation.
+      void this.startAsyncParsing(ctx, document);
     } catch (error) {
       this.handleWebviewError(webviewPanel, error);
     }
@@ -197,61 +209,42 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
     );
   }
 
-  private serializeDetails(details: Types.Details): {
-    tag: string;
-    value?: unknown;
-  } {
-    // Extract the discriminant in a robust way – depending on whether we still have the
-    // prototype or it has been stripped off (clone, JSON-serialisation, etc.).
-    const tag: string =
-      (details as unknown as { tag?: string }).tag ??
-      // Fallback to the private _tag used inside VariantImpl
-      (details as unknown as { _tag?: string })._tag ??
-      "unsupported";
-
-    // `value` can contain BigInts which cannot be exchanged via postMessage. Re-encode them.
-    const serialisedValue =
-      (details as unknown as { value?: unknown }).value !== undefined
-        ? this.replaceBigInts((details as unknown as { value: unknown }).value)
-        : undefined;
-
-    return { tag, value: serialisedValue };
-  }
-
+  /**
+   * Kick-off parsing in the background and expose results via the tRPC
+   * `PanelContext`. Data becomes available incrementally so the client can
+   * fetch what it needs when it needs it.
+   */
   private async startAsyncParsing(
-    webviewPanel: vscode.WebviewPanel,
-    data: Uint8Array,
+    ctx: PanelContext,
+    document: vscode.CustomDocument,
   ): Promise<void> {
     try {
-      const details: Types.Details = await this.parseElfDataAsync(data);
+      const reader = new PartialFileReader(document.uri);
+      const { size } = await vscode.workspace.fs.stat(document.uri);
+      const header = await reader.readChunk(0, Math.min(size, 16));
 
-      // Push the full parse results (variant-tagged & bigint-free).
-      webviewPanel.webview.postMessage({
-        type: "details",
-        data: this.serializeDetails(details),
-      });
+      const fileKind = await this.bininspect!.inspector.identify(header);
+      ctx.state.fileKind = fileKind;
+      ctx.events.emit("update", { ...ctx.state });
 
-      // If the format is unsupported, still forward the first 16 bytes as hex for UX niceties.
-      if (details.isUnsupported()) {
-        const magic = Array.from(data.slice(0, 16))
-          .map((b) => b.toString(16).padStart(2, "0"))
-          .join(" ");
-        webviewPanel.webview.postMessage({
-          type: "magic-bytes",
-          data: magic,
-        });
+      if (fileKind.isUnknown() || fileKind.isOther()) {
+        ctx.state.error = "Unknown file format";
+        ctx.state.parseComplete = true;
+        ctx.events.emit("update", { ...ctx.state });
+        return;
       }
 
-      webviewPanel.webview.postMessage({
-        type: "parse-complete",
-        data: { loadState: "complete" },
-      });
-    } catch (error) {
-      console.error("Error during async parsing:", error);
-      webviewPanel.webview.postMessage({
-        type: "error",
-        error: error instanceof Error ? error.message : "Unknown parsing error",
-      });
+      const data = await vscode.workspace.fs.readFile(document.uri);
+      const details = await this.bininspect!.inspector.parse(data);
+      ctx.state.details = details;
+      ctx.state.parseComplete = true;
+      ctx.events.emit("update", { ...ctx.state });
+    } catch (err) {
+      console.error("Error during async parsing:", err);
+      ctx.state.error =
+        err instanceof Error ? err.message : "Unknown parsing error";
+      ctx.state.parseComplete = true;
+      ctx.events.emit("update", { ...ctx.state });
     }
   }
 
@@ -278,7 +271,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
 
     const initialDataScript = /*html*/ `
         <script nonce="${nonce}">
-          window.__INITIAL_DATA__ = ${JSON.stringify(this.replaceBigInts(initialData))};
+          window.__INITIAL_DATA__ = ${JSON.stringify(initialData)};
         </script>
       `;
 
@@ -303,13 +296,6 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
             </body>
           </html>
         `;
-  }
-
-  private async parseElfDataAsync(elfData: Uint8Array): Promise<Types.Details> {
-    if (!this.bininspect) {
-      throw new Error("ELF Parser not initialized");
-    }
-    return this.bininspect.inspector.parse(elfData);
   }
 
   private extractFilename(uri: vscode.Uri): string {
@@ -343,24 +329,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
       .join("");
   }
 
-  private replaceBigInts = (obj: unknown): unknown => {
-    if (typeof obj === "bigint") {
-      return obj.toString(10);
-    } else if (Array.isArray(obj)) {
-      return obj.map(this.replaceBigInts);
-    } else if (obj && typeof obj === "object") {
-      const result: { [key: string]: unknown } = {};
-      for (const key in obj) {
-        if (Object.prototype.hasOwnProperty.call(obj, key)) {
-          result[key] = this.replaceBigInts(
-            (obj as { [key: string]: unknown })[key],
-          );
-        }
-      }
-      return result;
-    }
-    return obj;
-  };
+  // `replaceBigInts` helper no longer needed.
 }
 
 let extensionInstance: ElfPreviewExtension | undefined;

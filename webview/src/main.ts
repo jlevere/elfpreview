@@ -1,13 +1,11 @@
 import { mount } from "svelte";
 import Root from "./App.svelte";
 import "./App.css";
-import type { Types } from "@bininspect";
 
 declare global {
   interface Window {
     __INITIAL_DATA__?: {
       filename?: string;
-      basicInfo?: Types.BasicInfo;
     };
   }
 }

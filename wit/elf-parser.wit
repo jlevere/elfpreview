@@ -130,7 +130,7 @@ interface types {
   }
 
   // ------------------------------------------------------------------------
-  // Aggregate parse result – easy to extend in the future
+  // Aggregate parse result for known binary formats
   // ------------------------------------------------------------------------
   variant details {
     elf(elf-details),
