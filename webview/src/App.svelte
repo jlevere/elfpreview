@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import type { Types } from "../../ts/src/elfpreview";
-  import { VirtualList } from "svelte-virtuallists";
+  import type { ColumnDef } from "@tanstack/svelte-table";
+  import DataTable from "./DataTable.svelte";
 
   const {
     initialData,
@@ -93,15 +94,6 @@
 
   let selectedTab = $state("Sections");
 
-  // Symbol filter state
-  let symbolFilter = $state("");
-
-  const filteredSymbols = $derived(
-    symbols.filter((symbol) =>
-      symbol.name.toLowerCase().includes(symbolFilter.toLowerCase()),
-    ),
-  );
-
   // Tab switching
   function switchTab(tab: string) {
     selectedTab = tab;
@@ -121,6 +113,98 @@
     }
     return hexString.padStart(8, "0");
   }
+
+  // Column definitions for section headers table
+  const sectionColumns: Array<ColumnDef<Sectioninfo, any>> = [
+    {
+      accessorKey: "name",
+      header: "Name",
+    },
+    {
+      accessorKey: "typename",
+      header: "Type",
+    },
+    {
+      accessorKey: "address",
+      header: "Address",
+      cell: (info) =>
+        `0x${convertToBase16(info.getValue() as bigint, fileInfo?.class)}`,
+      enableColumnFilter: false,
+    },
+    {
+      accessorKey: "size",
+      header: "Size",
+      enableColumnFilter: false,
+    },
+  ];
+
+  // Column definitions for program headers table
+  const programColumns: Array<ColumnDef<Programinfo, any>> = [
+    {
+      accessorKey: "typename",
+      header: "Type",
+    },
+    {
+      accessorKey: "flagstring",
+      header: "Flags",
+    },
+    {
+      accessorKey: "vaddr",
+      header: "Virtual Address",
+      cell: (info) =>
+        `0x${convertToBase16(info.getValue() as bigint, fileInfo?.class)}`,
+      enableColumnFilter: false,
+    },
+    {
+      accessorKey: "paddr",
+      header: "Physical Address",
+      cell: (info) =>
+        `0x${convertToBase16(info.getValue() as bigint, fileInfo?.class)}`,
+      enableColumnFilter: false,
+    },
+    {
+      accessorKey: "filesz",
+      header: "File Size",
+      enableColumnFilter: false,
+    },
+    {
+      accessorKey: "memsz",
+      header: "Mem Size",
+      enableColumnFilter: false,
+    },
+  ];
+
+  // Column definitions for symbols table
+  const symbolColumns: Array<ColumnDef<Symbolinfo, any>> = [
+    {
+      accessorKey: "value",
+      header: "Value",
+      cell: (info) =>
+        `0x${convertToBase16(info.getValue() as bigint, fileInfo?.class)}`,
+      enableColumnFilter: false,
+    },
+    {
+      accessorKey: "size",
+      header: "Size",
+      enableColumnFilter: false,
+    },
+    {
+      accessorKey: "typestr",
+      header: "Type",
+    },
+    {
+      accessorKey: "bind",
+      header: "Bind",
+    },
+    {
+      accessorKey: "vis",
+      header: "Vis",
+    },
+    {
+      accessorKey: "name",
+      header: "Name",
+    },
+  ];
 </script>
 
 <div class="container">
@@ -200,29 +284,7 @@
       {#if !sectionsLoaded}
         <p>Loading Sections...</p>
       {:else}
-        <div class="virtual-table-container">
-          <div class="table-header">
-            <div class="name-col">Name</div>
-            <div class="type-col">Type</div>
-            <div class="addr-col">Address</div>
-            <div class="size-col">Size</div>
-          </div>
-          <VirtualList
-            items={sectionHeaders}
-            style="height: 350px; width: 100%;"
-          >
-            {#snippet vl_slot({ item }: { item: Sectioninfo })}
-              <div class="table-row">
-                <div class="name-col">{item.name}</div>
-                <div class="type-col">{item.typename}</div>
-                <div class="addr-col">
-                  0x{convertToBase16(item.address, fileInfo?.class)}
-                </div>
-                <div class="size-col">{item.size}</div>
-              </div>
-            {/snippet}
-          </VirtualList>
-        </div>
+        <DataTable data={sectionHeaders} columns={sectionColumns} />
       {/if}
     </div>
   {/if}
@@ -233,35 +295,7 @@
       {#if !programsLoaded}
         <p>Loading Program Headers...</p>
       {:else}
-        <div class="virtual-table-container">
-          <div class="table-header">
-            <div class="type-col">Type</div>
-            <div class="flags-col">Flags</div>
-            <div class="vaddr-col">Virtual Address</div>
-            <div class="paddr-col">Physical Address</div>
-            <div class="filesz-col">File Size</div>
-            <div class="memsz-col">Mem Size</div>
-          </div>
-          <VirtualList
-            items={programHeaders}
-            style="height: 350px; width: 100%;"
-          >
-            {#snippet vl_slot({ item }: { item: Programinfo })}
-              <div class="table-row">
-                <div class="type-col">{item.typename}</div>
-                <div class="flags-col">{item.flagstring}</div>
-                <div class="vaddr-col">
-                  0x{convertToBase16(item.vaddr, fileInfo?.class)}
-                </div>
-                <div class="paddr-col">
-                  0x{convertToBase16(item.paddr, fileInfo?.class)}
-                </div>
-                <div class="filesz-col">{item.filesz}</div>
-                <div class="memsz-col">{item.memsz}</div>
-              </div>
-            {/snippet}
-          </VirtualList>
-        </div>
+        <DataTable data={programHeaders} columns={programColumns} />
       {/if}
     </div>
   {/if}
@@ -272,45 +306,7 @@
       {#if !symbolsLoaded}
         <p>Loading Symbols...</p>
       {:else}
-        <div class="filter-container">
-          <input
-            type="text"
-            bind:value={symbolFilter}
-            placeholder="Filter name..."
-          />
-          <span class="count-badge"
-            >{filteredSymbols.length} of {symbols.length} symbols</span
-          >
-        </div>
-        <div class="virtual-table-container">
-          <div class="table-header">
-            <div class="sym-value-col">Value</div>
-            <div class="size-col">Size</div>
-            <div class="sym-type-col">Type</div>
-            <div class="bind-col">Bind</div>
-            <div class="vis-col">Vis</div>
-            <div class="name-col">Name</div>
-          </div>
-          <VirtualList
-            items={filteredSymbols}
-            style="height: 350px; width: 100%;"
-          >
-            {#snippet vl_slot({ item }: { item: Symbolinfo })}
-              <div class="table-row">
-                <div class="sym-value-col">
-                  0x{convertToBase16(item.value, fileInfo?.class)}
-                </div>
-                <div class="size-col">{item.size}</div>
-                <div class="sym-type-col">{item.typestr}</div>
-                <div class="bind-col">{item.bind}</div>
-                <div class="vis-col">{item.vis}</div>
-                <div class="name-col" role="tooltip" title={item.name}>
-                  {item.name}
-                </div>
-              </div>
-            {/snippet}
-          </VirtualList>
-        </div>
+        <DataTable data={symbols} columns={symbolColumns} />
       {/if}
     </div>
   {/if}
@@ -497,21 +493,7 @@
     background-color: var(--vscode-debugIcon-startForeground);
   }
 
-  input[type="text"] {
-    background-color: var(--vscode-editor-background);
-    border: 1px solid var(--vscode-panel-border);
-    padding: 8px 12px;
-    color: var(--vscode-editor-foreground);
-    margin-bottom: 10px;
-    border-radius: 4px;
-    width: 100px;
-  }
-
-  input[type="text"]:focus {
-    border: 1px solid var(--vscode-focusBorder);
-    box-shadow: 0 0 4px var(--vscode-focusBorder);
-  }
-
+  /* Dynamic Info section layout (not using DataTable) */
   .virtual-table-container {
     width: 100%;
     border: 1px solid var(--vscode-panel-border, #333333);
@@ -530,9 +512,6 @@
     background-color: var(--vscode-editor-lineHighlightBackground, #2a2d2e);
     font-weight: 500;
     border-bottom: 1px solid var(--vscode-panel-border, #333333);
-    position: sticky;
-    top: 0;
-    z-index: 1;
   }
 
   .table-header > div,
@@ -551,84 +530,19 @@
     background-color: var(--vscode-list-hoverBackground, #2a2d2e);
   }
 
-  :global(.virtual-table-container .svelte-virtuallist) {
-    width: 100% !important;
+  .name-col {
+    flex: 1;
+    min-width: 120px;
   }
 
-  :global(.virtual-table-container .svelte-virtuallist-contents) {
-    width: 100% !important;
+  .value-col {
+    flex: 2;
+    min-width: 200px;
   }
 
   @media (max-width: 768px) {
     .file-info-grid {
       grid-template-columns: 1fr;
     }
-  }
-
-  /* Column widths */
-  .name-col {
-    flex: 2;
-    min-width: 150px;
-  }
-  .type-col {
-    flex: 1.5;
-    min-width: 90px;
-    max-width: 120px;
-  }
-  .addr-col {
-    flex: 1;
-    min-width: 100px;
-  }
-
-  .flags-col {
-    flex: 0.8;
-    min-width: 80px;
-  }
-  .vaddr-col,
-  .paddr-col {
-    flex: 1;
-    min-width: 100px;
-  }
-  .filesz-col,
-  .memsz-col {
-    flex: 0.8;
-    min-width: 80px;
-  }
-
-  .flags-col {
-    width: 15%;
-    min-width: 60px;
-  }
-  .vaddr-col,
-  .paddr-col {
-    width: 20%;
-    min-width: 100px;
-  }
-  .filesz-col,
-  .memsz-col {
-    width: 15%;
-    min-width: 80px;
-  }
-
-  .sym-value-col {
-    width: 10%;
-    min-width: 80px;
-    max-width: 110px;
-  }
-
-  .vis-col,
-  .sym-type-col {
-    width: 8%;
-    min-width: 40px;
-    max-width: 60px;
-    text-align: left;
-  }
-
-  .size-col,
-  .bind-col {
-    width: 8%;
-    min-width: 40px;
-    max-width: 60px;
-    text-align: right;
   }
 </style>
