@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import {
   isReadyMessage,
+  isCopyMessage,
   type HostMessage,
   type PreviewState,
 } from "./protocol";
@@ -16,6 +17,7 @@ export function connectView(
   snapshot: () => PreviewState,
   onChange: Subscribe<PreviewState>,
   onError: (error: unknown) => void,
+  copy?: (text: string) => PromiseLike<void>,
 ): Disposable {
   let ready = false;
   const send = (state: PreviewState) => {
@@ -29,6 +31,10 @@ export function connectView(
     if (isReadyMessage(message)) {
       ready = true;
       send(snapshot());
+    } else if (ready && copy && isCopyMessage(message)) {
+      void Promise.resolve(copy(message.text))
+        .then(() => port.postMessage({ type: "copied" }))
+        .catch(onError);
     }
   });
   const changes = onChange(send);

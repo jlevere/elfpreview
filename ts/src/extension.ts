@@ -27,6 +27,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider<ElfDocum
       () => document.snapshot,
       document.onDidChange,
       (error) => this.log.error("Failed to update ELF preview", error),
+      (text) => vscode.env.clipboard.writeText(text),
     );
     panel.onDidDispose(() => connection.dispose());
     const dist = vscode.Uri.joinPath(this.extensionUri, "dist");

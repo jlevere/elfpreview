@@ -9,6 +9,7 @@ try {
   if (!files.length) throw new Error("Supply at least one test file");
   await build({
     entryPoints: files,
+    entryNames: "[name]",
     outdir: directory,
     bundle: true,
     platform: "node",
@@ -20,7 +21,7 @@ try {
       [
         "--test",
         ...files.map((file) =>
-          path.join(directory, path.basename(file, ".ts") + ".js"),
+          path.join(directory, path.parse(file).name + ".js"),
         ),
       ],
       { stdio: "inherit" },

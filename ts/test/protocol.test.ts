@@ -99,3 +99,53 @@ test("failed webview delivery is reported without an unhandled rejection", async
   assert.equal(await reported, failure);
   connection.dispose();
 });
+
+test("clipboard requests require readiness and text and acknowledge completed writes", async () => {
+  const events = new EventEmitter();
+  const sent: HostMessage[] = [];
+  const written: string[] = [];
+  let acknowledge!: () => void;
+  const copied = new Promise<void>((resolve) => {
+    acknowledge = resolve;
+  });
+  const connection = connectView(
+    {
+      onDidReceiveMessage(listener) {
+        events.on("message", listener);
+        return {
+          dispose() {
+            events.off("message", listener);
+          },
+        };
+      },
+      postMessage(message) {
+        sent.push(message);
+        if (message.type === "copied") acknowledge();
+        return Promise.resolve(true);
+      },
+    },
+    () => ({ filename: "sample", status: "loading" }),
+    () => ({ dispose() {} }),
+    (error) => assert.fail(String(error)),
+    (text) => {
+      written.push(text);
+      return Promise.resolve();
+    },
+  );
+  events.emit("message", { type: "copy", text: "before readiness" });
+  events.emit("message", { type: "ready" });
+  for (const message of [
+    { type: "copy" },
+    { type: "copy", text: 1 },
+    { type: "copy", text: "x".repeat(32 * 1024 * 1024 + 4097) },
+  ])
+    events.emit("message", message);
+  events.emit("message", {
+    type: "copy",
+    text: "Name\tfull symbol\nValue\t0xffffffffffffffff",
+  });
+  await copied;
+  assert.deepEqual(written, ["Name\tfull symbol\nValue\t0xffffffffffffffff"]);
+  assert.equal(sent.at(-1)?.type, "copied");
+  connection.dispose();
+});
