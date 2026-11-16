@@ -1,10 +1,10 @@
-const esbuild = require("esbuild");
-const sveltePlugin = require("esbuild-svelte");
+import * as esbuild from "esbuild";
+import sveltePlugin from "esbuild-svelte";
 const production = process.argv.includes("--production");
 const watch = process.argv.includes("--watch");
 
 async function main() {
-  const extensionConfig = {
+  const extensionConfig: esbuild.BuildOptions = {
     entryPoints: ["ts/src/extension.ts", "ts/src/worker.ts"],
     bundle: true,
     format: "cjs",
@@ -18,7 +18,7 @@ async function main() {
     logLevel: "warning",
   };
 
-  const webviewConfig = {
+  const webviewConfig: esbuild.BuildOptions = {
     entryPoints: ["webview/src/main.ts"],
     bundle: true,
     format: "esm",
@@ -52,8 +52,7 @@ async function main() {
   }
 }
 
-/** @type {import('esbuild').Plugin} */
-const esbuildProblemMatcherPlugin = {
+const esbuildProblemMatcherPlugin: esbuild.Plugin = {
   name: "esbuild-problem-matcher",
   setup(build) {
     build.onStart(() => {

@@ -1,15 +1,14 @@
 {
-    "compilerOptions": {
-        "incremental": true,
-        "composite": true
-    },
-    "files": [],
-    "references": [
-        {
-            "path": "ts/tsconfig.json"
-        },
-        {
-            "path": "webview/tsconfig.json"
-        }
-    ]
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": true,
+    "module": "ESNext",
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "moduleResolution": "bundler"
+  },
+  "include": ["*.mts", "scripts/**/*.mts"]
 }

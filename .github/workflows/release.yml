@@ -13,10 +13,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
       - name: Verify requested version
         env:
           RELEASE_VERSION: ${{ inputs.version }}
-        run: node scripts/check-release.mjs
+        run: node scripts/check-release.mts
   checks:
     needs: version
     uses: ./.github/workflows/lint.yml

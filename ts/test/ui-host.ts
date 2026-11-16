@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-type Command =
+export type Command =
   | { action: "open"; uri: string }
   | { action: "close" | "finish" | "hide" | "split" | "assertSingleRead" };
 

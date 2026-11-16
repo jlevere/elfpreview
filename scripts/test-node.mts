@@ -14,7 +14,7 @@ try {
     platform: "node",
     format: "cjs",
   });
-  await new Promise((resolve, reject) => {
+  await new Promise<void>((resolve, reject) => {
     const child = spawn(
       process.execPath,
       [
