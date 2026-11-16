@@ -1,30 +1,12 @@
-# build stuff
-.direnv/**
-node_modules/**
-.vscode/**
-.github/**
-.vscode-test/**
-target/**
-
-# src
-ts/**
-rust/**
-webview/**
-wit/**
-
-# files
-.envrc
-esbuild.js
-flake.lock
-flake.nix
-eslint.config.mjs 
-.gitignore
-pnpm-lock.yaml
-LICENCE.txt
-
-# file types
-**/tsconfig.json
-**/eslint.config.mjs
-**/*.map
-**/*.ts
-**/.vscode-test.*
+**
+!package.json
+!README.md
+!LICENSE*
+!LICENCE*
+!docs/*.png
+!docs/*.gif
+!dist/extension.js
+!dist/worker.js
+!dist/webview.js
+!dist/webview.css
+!dist/elfpreview.wasm

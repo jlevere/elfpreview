@@ -66,33 +66,13 @@ export type Types = {
 export namespace Elfparser {
 	export type Elfinfo = Types.Elfinfo;
 
-	export type Fileinfo = Types.Fileinfo;
-
 	/**
-	 * Parse an ELF binary file
-	 *
 	 * @throws $wcm.wstring.Error
 	 */
 	export type parseelf = (data: Uint8Array) => Elfinfo;
-
-	/**
-	 * Check if file is valid ELF
-	 *
-	 * @throws $wcm.wstring.Error
-	 */
-	export type validateelf = (data: Uint8Array) => boolean;
-
-	/**
-	 * Parse just the header
-	 *
-	 * @throws $wcm.wstring.Error
-	 */
-	export type quickparseelf = (data: Uint8Array) => Fileinfo;
 }
 export type Elfparser = {
 	parseelf: Elfparser.parseelf;
-	validateelf: Elfparser.validateelf;
-	quickparseelf: Elfparser.quickparseelf;
 };
 export namespace elfpreview {
 	export type Imports = {
@@ -180,33 +160,21 @@ export namespace Types._ {
 
 export namespace Elfparser.$ {
 	export const Elfinfo = Types.$.Elfinfo;
-	export const Fileinfo = Types.$.Fileinfo;
 	export const parseelf = new $wcm.FunctionType<Elfparser.parseelf>('parseelf',[
 		['data', new $wcm.Uint8ArrayType()],
 	], new $wcm.ResultType<Elfparser.Elfinfo, string>(Elfinfo, $wcm.wstring, $wcm.wstring.Error));
-	export const validateelf = new $wcm.FunctionType<Elfparser.validateelf>('validateelf',[
-		['data', new $wcm.Uint8ArrayType()],
-	], new $wcm.ResultType<boolean, string>($wcm.bool, $wcm.wstring, $wcm.wstring.Error));
-	export const quickparseelf = new $wcm.FunctionType<Elfparser.quickparseelf>('quickparseelf',[
-		['data', new $wcm.Uint8ArrayType()],
-	], new $wcm.ResultType<Elfparser.Fileinfo, string>(Fileinfo, $wcm.wstring, $wcm.wstring.Error));
 }
 export namespace Elfparser._ {
 	export const id = 'elfpreview:parser/elfparser' as const;
 	export const witName = 'elfparser' as const;
 	export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
-		['Elfinfo', $.Elfinfo],
-		['Fileinfo', $.Fileinfo]
+		['Elfinfo', $.Elfinfo]
 	]);
 	export const functions: Map<string, $wcm.FunctionType> = new Map([
-		['parseelf', $.parseelf],
-		['validateelf', $.validateelf],
-		['quickparseelf', $.quickparseelf]
+		['parseelf', $.parseelf]
 	]);
 	export type WasmInterface = {
 		'parseelf': (data_ptr: i32, data_len: i32, result: ptr<result<Elfinfo, string>>) => void;
-		'validateelf': (data_ptr: i32, data_len: i32, result: ptr<result<boolean, string>>) => void;
-		'quickparseelf': (data_ptr: i32, data_len: i32, result: ptr<result<Fileinfo, string>>) => void;
 	};
 	export namespace imports {
 		export type WasmInterface = _.WasmInterface;
@@ -243,8 +211,6 @@ export namespace elfpreview._ {
 	}
 	export type Exports = {
 		'elfpreview:parser/elfparser#parseelf': (data_ptr: i32, data_len: i32, result: ptr<result<Types.Elfinfo, string>>) => void;
-		'elfpreview:parser/elfparser#validateelf': (data_ptr: i32, data_len: i32, result: ptr<result<boolean, string>>) => void;
-		'elfpreview:parser/elfparser#quickparseelf': (data_ptr: i32, data_len: i32, result: ptr<result<Types.Fileinfo, string>>) => void;
 	};
 	export function bind(service: elfpreview.Imports, code: $wcm.Code, context?: $wcm.ComponentModelContext): Promise<elfpreview.Exports>;
 	export function bind(service: elfpreview.Imports.Promisified, code: $wcm.Code, port: $wcm.RAL.ConnectionPort, context?: $wcm.ComponentModelContext): Promise<elfpreview.Exports.Promisified>;

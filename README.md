@@ -25,19 +25,19 @@ This extension is designed to analyze ELF files by:
 
 - Presenting a detailed webview with a simple, efficient UI built with Svelte 5.
 
-- Efficiently handling large binaries and files with thousands of symbols.
+- Handling binaries up to 64 MiB, with reports limited to 250,000 records and 32 MiB of text, and virtualized tables for large symbol lists.
 
-It is implemented using a combination of Rust (via the [libgoblin](https://github.com/m4b/goblin) library running in WebAssembly) and TypeScript. Communication between the WebAssembly module and the extension is facilitated by WASI and [WIT types](https://component-model.bytecodealliance.org/design/wit.html), ensuring seamless type sharing and solid cross platform preformance.
+It is implemented using a combination of Rust (via the [libgoblin](https://github.com/m4b/goblin) library running in WebAssembly) and TypeScript. The parser is a core WebAssembly module built for `wasm32-unknown-unknown`, with [WIT types](https://component-model.bytecodealliance.org/design/wit.html) and canonical ABI bindings. It has no WASI imports and is not a packaged WebAssembly component.
 
 ## Features
 
-- **Fast File Analysis**: Quickly loads and displays basic file information for instant feedback.
+- **File Analysis**: Shows a loading state while a worker parses the file, then displays the complete result.
 
 - **Detailed Parsing**: Processing of ELF binaries, even those with extensive symbols, done in the background to reduce felt lag.
 
 - **No-Frills UI**: A straightforward, functional webview that just works, no unnecessary complexity.
 
-- **Lightweight & Cross Platform**: At only a few hundred kb, the extension is snappy and works on macOS, Windows, Linux, and the web version of VS Code.
+- **Desktop & Remote Extension Hosts**: Uses a Node extension host on macOS, Windows, or Linux. It does not run as a browser-only VS Code extension.
 
 ## Installation
 
@@ -77,13 +77,7 @@ There are no settings for this extension
 
 ## Known Issues
 
-- TypeScript Generation Error:
-
-  Running `pnpm generate` results in typescript type error. This is because `wit2ts` mixes up some types that need to be manually corrected. I am unsure if this is a bug or a skill issue.
-
-- Rust Build Target Warnings:
-
-  Using the expected build target for rust, `wasm32-wasi` or `wasm32-wasip2` results in linker errors. I am unsure why this is the case, or for that matter, why using a more generic target still works, but it does so :shrug:
+- `pnpm generate:wit` applies a bounded workaround for namespace errors in `wit2ts` 1.0.2; `pnpm check:generated` verifies the committed bindings.
 
 If you experence any other issues, please submit an issue here: [elfpreview/issues](https://github.com/jlevere/elfpreview/issues)
 
@@ -101,20 +95,20 @@ Initial release
 
 How files are processed:
 
-1. Initial Display: Upon opening an ELF file, the extension quickly presents basic information (similar to the output of file).
+1. Initial Display: Upon opening an ELF file, the extension shows a loading state.
 
-2. Background Processing: The heavy lifting is performed in the background:
+2. Background Processing: Each custom document owns one parse job in a Node worker:
 
-   - The binary is read into WebAssembly.
+   - The file is read through VS Code’s filesystem API and transferred to the worker.
 
    - The Rust-based parser (using libgoblin) processes the file.
 
-   - Data is then incrementally populated into the webview.
+   - The worker returns one typed result; views receive it after a ready handshake. Closing the document cancels unfinished parsing; filesystem reads already in progress finish through VS Code’s API.
 
-3. Communication: Type sharing between TypeScript and WebAssembly is managed via WASI and WIT, with stubs generated using [Microsoft's wit2ts tool](https://github.com/microsoft/vscode-wasm/blob/main/wasm-component-model/bin/wit2ts).
+3. Communication: Type sharing between TypeScript and WebAssembly uses WIT and canonical ABI bindings, with stubs generated using [Microsoft's wit2ts tool](https://github.com/microsoft/vscode-wasm/blob/main/wasm-component-model/bin/wit2ts).
 
 ## Tests
 
-There are tests for the rust code located in the [lib.rs](./rust/src/lib.rs) file it self. The utilize a few test files in the [fixtures](./rust/tests/fixtures/) directory. Some of these test binaries were taken from [https://github.com/tmpout/elfs](https://github.com/tmpout/elfs), primarily made by [@netspooky](https://x.com/netspooky)
+The Rust tests are in [tests.rs](./rust/src/tests.rs). They use a few test files in the [fixtures](./rust/tests/fixtures/) directory. Some of these test binaries were taken from [https://github.com/tmpout/elfs](https://github.com/tmpout/elfs), primarily made by [@netspooky](https://x.com/netspooky)
 
 Some have strange architectures, some lots of headers, etc. The one that actually gave pause was a simple rust program compiled with symbols in a nix enviroment. Turns out it has several hundered symbols with massively long names which is a struggle to push through the ts wasm boundary and also just to display cleanly.

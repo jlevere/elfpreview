@@ -1,5 +1,5 @@
 {
-  description = "Development environment for VSCode extension dev with TS and Rust Wasip2";
+  description = "Development environment for VSCode extension dev with TypeScript and Rust WebAssembly";
 
   inputs = {
     fenix = {
@@ -20,18 +20,21 @@
       pkgs = nixpkgs.legacyPackages.${system};
       rust = with fenix.packages.${system};
         combine [
-          stable.toolchain
+          stable.rustc
+          stable.cargo
+          stable.clippy
+          stable.rustfmt
+          stable.rust-std
           targets.wasm32-unknown-unknown.stable.rust-std
-          targets.wasm32-wasip1.stable.rust-std
         ];
     in {
       devShells = {
         default = pkgs.mkShell {
           buildInputs = with pkgs; [
-            nodejs
-            nodePackages.pnpm
+            nodejs_24
+            pnpm
 
-            nodePackages.typescript-language-server
+            typescript-language-server
             vscode-langservers-extracted
 
             wasm-tools
@@ -39,23 +42,6 @@
             llvmPackages.bintools
 
             rust
-          ];
-        };
-
-        wasmBuild = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            nodejs
-            nodePackages.pnpm
-            wasm-tools
-            llvmPackages.bintools
-            rust
-          ];
-        };
-
-        pnpmBuild = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            nodejs
-            nodePackages.pnpm
           ];
         };
       };

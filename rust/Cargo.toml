@@ -1,16 +1,12 @@
 [package]
 name = "elfpreview"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [lib]
 crate-type = ["cdylib"] 
 
 [dependencies]
-goblin = "0.10.0"
+goblin = { version = "0.10.7", default-features = false, features = ["std", "elf32", "elf64", "endian_fd"] }
 scroll = "0.13.0"
-wit-bindgen = "0.43.0"
-
-
-[package.metadata.component]
-package = "elfpreview:parser"
+wit-bindgen = "0.63.0"

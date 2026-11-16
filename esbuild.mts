@@ -1,24 +1,24 @@
-const esbuild = require("esbuild");
-const sveltePlugin = require("esbuild-svelte");
+import * as esbuild from "esbuild";
+import sveltePlugin from "esbuild-svelte";
 const production = process.argv.includes("--production");
 const watch = process.argv.includes("--watch");
-const sveltePreprocess = require("svelte-preprocess");
 
 async function main() {
-  const extensionConfig = {
-    entryPoints: ["ts/src/extension.ts"],
+  const extensionConfig: esbuild.BuildOptions = {
+    entryPoints: ["ts/src/extension.ts", "ts/src/worker.ts"],
     bundle: true,
     format: "cjs",
     minify: production,
     sourcemap: !production,
     sourcesContent: false,
     platform: "node",
-    outfile: "dist/extension.js",
+    target: "node20",
+    outdir: "dist",
     external: ["vscode"],
     logLevel: "warning",
   };
 
-  const webviewConfig = {
+  const webviewConfig: esbuild.BuildOptions = {
     entryPoints: ["webview/src/main.ts"],
     bundle: true,
     format: "esm",
@@ -30,7 +30,6 @@ async function main() {
     outfile: "dist/webview.js",
     plugins: [
       sveltePlugin({
-        preprocess: sveltePreprocess(),
         compilerOptions: {
           dev: !production,
         },
@@ -39,26 +38,21 @@ async function main() {
     conditions: ["svelte"],
   };
 
-  const ctx = await esbuild.context({
-    ...extensionConfig,
-    plugins: [esbuildProblemMatcherPlugin],
-  });
-
-  const webviewCtx = await esbuild.context(webviewConfig);
-
+  const configs = [
+    { ...extensionConfig, plugins: [esbuildProblemMatcherPlugin] },
+    webviewConfig,
+  ];
   if (watch) {
-    await ctx.watch();
-    await webviewCtx.watch();
+    for (const config of configs) {
+      const context = await esbuild.context(config);
+      await context.watch();
+    }
   } else {
-    await ctx.rebuild();
-    await webviewCtx.rebuild();
-    await ctx.dispose();
-    await webviewCtx.dispose();
+    await Promise.all(configs.map((config) => esbuild.build(config)));
   }
 }
 
-/** @type {import('esbuild').Plugin} */
-const esbuildProblemMatcherPlugin = {
+const esbuildProblemMatcherPlugin: esbuild.Plugin = {
   name: "esbuild-problem-matcher",
   setup(build) {
     build.onStart(() => {
