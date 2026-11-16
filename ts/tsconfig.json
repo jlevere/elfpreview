@@ -1,20 +1,15 @@
 {
-	"compilerOptions": {
-		"composite": true,
-		"module": "ESNext",
-		"moduleResolution": "bundler",
-		"target": "ES2022",
-		"lib": [
-			"ES2022",
-			"WebWorker" // see https://github.com/microsoft/vscode/issues/205537
-		],
-		"sourceMap": true,
-		"rootDir": ".",
-		"outDir": "../dist",
-		"tsBuildInfoFile": "../dist/compile.tsbuildInfo",
-		"strict": true, /* enable all strict type-checking options */
-	},
-	"include": [
-		"src/**/*.ts",
-	]
+  "compilerOptions": {
+    "composite": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2022",
+    "lib": ["ES2022", "WebWorker"],
+    "sourceMap": true,
+    "rootDir": ".",
+    "outDir": "../dist",
+    "tsBuildInfoFile": "../dist/compile.tsbuildInfo",
+    "strict": true
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
 }

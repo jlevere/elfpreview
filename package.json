@@ -76,20 +76,25 @@
     }
   },
   "scripts": {
-    "build": "pnpm lint && pnpm prepare-dist && pnpm esbuild && pnpm compile:rust",
-    "package": "pnpm lint && pnpm prepare-dist && pnpm esbuild:prod && pnpm compile:rust && pnpm vsce:package",
+    "build": "pnpm check && pnpm esbuild && pnpm compile:rust",
+    "package": "pnpm check && pnpm esbuild:prod && pnpm compile:rust && pnpm vsce:package",
     "publish": "pnpm package && pnpm vsce:publish",
     "prepare-dist": "pnpm exec mkdirp dist",
     "clean": "pnpm exec rimraf dist",
     "esbuild": "node esbuild.js",
     "esbuild:prod": "node esbuild.js --production",
     "watch:esbuild": "pnpm esbuild --watch",
-    "compile:rust": "pnpm prepare-dist && pnpm exec cargo build --release --target wasm32-unknown-unknown && pnpm exec cp --update target/wasm32-unknown-unknown/release/*.wasm dist/",
+    "compile:rust": "cargo build --locked --release --target wasm32-unknown-unknown && node scripts/copy-wasm.mjs",
     "lint": "pnpm exec eslint ./ts/src ./webview/src",
-    "test": "pnpm exec cargo test",
+    "test": "pnpm test:rust",
     "generate:wit": "pnpm exec wit2ts --outDir ./ts/src ./wit/elf-parser.wit",
     "vsce:package": "pnpm exec vsce package",
-    "vsce:publish": "pnpm exec vsce publish"
+    "vsce:publish": "pnpm exec vsce publish",
+    "check": "pnpm lint && pnpm check:types",
+    "check:types": "tsc --noEmit -p ts/tsconfig.json && svelte-check --tsconfig webview/tsconfig.json",
+    "test:rust": "cargo test --locked",
+    "test:extension": "node scripts/test-extension.mjs",
+    "watch:tsc": "tsc --noEmit --watch -p ts/tsconfig.json"
   },
   "devDependencies": {
     "@eslint/js": "^9.23.0",
@@ -126,5 +131,6 @@
       "esbuild",
       "svelte-preprocess"
     ]
-  }
+  },
+  "packageManager": "pnpm@10.12.4"
 }

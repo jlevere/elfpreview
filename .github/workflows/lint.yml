@@ -1,26 +1,21 @@
-name: Lint and Test
-
-on:
-  push:
-  pull_request:
-  workflow_dispatch:
-
+name: Check and Test
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
 jobs:
-  lint:
+  check:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-
-      - name: Setup Attic cache
-        uses: ryanccn/attic-action@v0
-        with:
-          endpoint: ${{ secrets.ATTIC_ENDPOINT }}
-          cache: ${{ secrets.ATTIC_CACHE }}
-          token: ${{ secrets.ATTIC_TOKEN }}
-
-      - run: nix develop .#pnpmBuild --command pnpm install
-      - run: nix develop .#pnpmBuild --command pnpm lint
+      - uses: DeterminateSystems/nix-installer-action@v17
+      - run: nix develop --command pnpm install --frozen-lockfile
+      - run: nix develop --command pnpm build
+      - run: nix develop --command pnpm test
+      - name: Install VS Code
+        run: |
+          mkdir -p "$RUNNER_TEMP/vscode"
+          curl --fail --location 'https://update.code.visualstudio.com/latest/linux-x64/stable' | tar -xz --strip-components=1 -C "$RUNNER_TEMP/vscode"
+      - name: Extension host tests
+        env:
+          VSCODE_EXECUTABLE: ${{ runner.temp }}/vscode/code
+        run: xvfb-run -a nix develop --command pnpm test:extension
