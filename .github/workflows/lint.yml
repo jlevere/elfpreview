@@ -15,6 +15,9 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/vscode"
           curl --fail --location 'https://update.code.visualstudio.com/latest/linux-x64/stable' | tar -xz --strip-components=1 -C "$RUNNER_TEMP/vscode"
+          # Tarball installs need the ownership and mode supplied by a system package.
+          sudo chown root:root "$RUNNER_TEMP/vscode/chrome-sandbox"
+          sudo chmod 4755 "$RUNNER_TEMP/vscode/chrome-sandbox"
       - name: Extension host tests
         env:
           VSCODE_EXECUTABLE: ${{ runner.temp }}/vscode/code
