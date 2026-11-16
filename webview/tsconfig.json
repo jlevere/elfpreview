@@ -1,32 +1,33 @@
 {
-    "extends": "@tsconfig/svelte/tsconfig.json",
-    "compilerOptions": {
-        "composite": true,
-        "target": "ES2022",
-        "module": "ES2022",
-        "strict": true,
-        "esModuleInterop": true,
-        "skipLibCheck": true,
-        "forceConsistentCasingInFileNames": true,
-        "moduleResolution": "bundler",
-        "resolveJsonModule": true,
-        "isolatedModules": true,
-        "baseUrl": ".",
-        "paths": {
-            "$lib/*": [
-                "src/lib/*"
-            ]
-        },
-        "types": [
-            "svelte",
-        ]
+  "extends": "@tsconfig/svelte/tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "target": "ES2022",
+    "module": "ES2022",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "$lib/*": [
+        "src/lib/*"
+      ]
     },
-    "include": [
-        "src/**/*.ts",
-        "src/**/*.svelte",
-        "../ts/src/generated/elfpreview.ts"
-    ],
-    "exclude": [
-        "node_modules"
+    "types": [
+      "svelte"
     ]
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.svelte",
+    "../ts/src/generated/elfpreview.ts",
+    "../ts/src/protocol.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

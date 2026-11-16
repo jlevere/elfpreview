@@ -96,7 +96,8 @@
     "test:extension": "node scripts/test-extension.mjs",
     "watch:tsc": "tsc --noEmit --watch -p ts/tsconfig.json",
     "check:generated": "node scripts/generate-wit.mjs --check",
-    "test:wasm": "node scripts/test-node.mjs ts/test/wasm.test.ts"
+    "test:wasm": "node scripts/test-node.mjs ts/test/wasm.test.ts ts/test/protocol.test.ts",
+    "test:ui": "node scripts/test-ui.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.23.0",
@@ -116,6 +117,7 @@
     "eslint-plugin-svelte": "^3.3.3",
     "globals": "^16.0.0",
     "mkdirp": "^3.0.1",
+    "playwright": "1.65.1",
     "prettier": "^3.5.3",
     "prettier-plugin-svelte": "^3.3.3",
     "rimraf": "^6.0.1",
