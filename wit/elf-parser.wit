@@ -34,7 +34,7 @@ interface types {
     osabi: string,
     filetype: string,
     version: u32,
-    stripped: bool,
+    stripped: option<bool>,
   }
 
   record dynlinkinfo {
@@ -61,7 +61,7 @@ interface elfparser {
   // Parse an ELF binary file
   parseelf: func(data: list<u8>) -> result<elfinfo, string>;
   
-  // Check if file is valid ELF
+  // Validate the ELF header; does not validate section or program contents
   validateelf: func(data: list<u8>) -> result<bool, string>;
 
   // Parse just the header

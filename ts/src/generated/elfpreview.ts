@@ -40,7 +40,7 @@ export namespace Types {
 		osabi: string;
 		filetype: string;
 		version: u32;
-		stripped: boolean;
+		stripped?: boolean | undefined;
 	};
 
 	export type Dynlinkinfo = {
@@ -76,7 +76,7 @@ export namespace Elfparser {
 	export type parseelf = (data: Uint8Array) => Elfinfo;
 
 	/**
-	 * Check if file is valid ELF
+	 * Validate the ELF header; does not validate section or program contents
 	 *
 	 * @throws $wcm.wstring.Error
 	 */
@@ -145,7 +145,7 @@ export namespace Types.$ {
 		['osabi', $wcm.wstring],
 		['filetype', $wcm.wstring],
 		['version', $wcm.u32],
-		['stripped', $wcm.bool],
+		['stripped', new $wcm.OptionType<boolean>($wcm.bool)],
 	]);
 	export const Dynlinkinfo = new $wcm.RecordType<Types.Dynlinkinfo>([
 		['isDynamic', $wcm.bool],
