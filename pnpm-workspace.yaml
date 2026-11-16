@@ -1,0 +1,6 @@
+onlyBuiltDependencies:
+  - esbuild
+# VSCE's minimatch 10 range has an unpatched glob amplification advisory.
+# Scope the fix to packaging; the installed-VSIX tests verify the resulting file list.
+overrides:
+  "@vscode/vsce>minimatch": ^11.0.1

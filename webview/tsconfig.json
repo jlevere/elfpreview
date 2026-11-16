@@ -11,15 +11,7 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "baseUrl": ".",
-    "paths": {
-      "$lib/*": [
-        "src/lib/*"
-      ]
-    },
-    "types": [
-      "svelte"
-    ]
+    "types": ["svelte"]
   },
   "include": [
     "src/**/*.ts",
@@ -27,7 +19,5 @@
     "../ts/src/generated/elfpreview.ts",
     "../ts/src/protocol.ts"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }

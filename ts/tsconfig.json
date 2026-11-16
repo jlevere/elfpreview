@@ -9,7 +9,11 @@
     "rootDir": ".",
     "outDir": "../dist",
     "tsBuildInfoFile": "../dist/compile.tsbuildInfo",
-    "strict": true
+    "strict": true,
+    "types": ["node", "vscode"],
+    // wasm-component-model 1.0.2 declares SharedArrayBuffer as ArrayBuffer.
+    // Skip upstream declarations; all project code remains strictly checked.
+    "skipLibCheck": true
   },
   "include": ["src/**/*.ts", "test/**/*.ts"]
 }

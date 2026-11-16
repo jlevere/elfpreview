@@ -1,20 +1,31 @@
 name: Check and Test
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
 permissions:
   contents: read
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        vscode: ["1.98.0", "latest"]
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v17
       - run: nix develop --command pnpm install --frozen-lockfile
-      - run: nix develop --command pnpm build
+      - run: nix develop --command pnpm check:rust
+      - run: nix develop --command pnpm package
       - run: nix develop --command pnpm test
       - name: Install VS Code
+        env:
+          VSCODE_VERSION: ${{ matrix.vscode }}
         run: |
           mkdir -p "$RUNNER_TEMP/vscode"
-          curl --fail --location 'https://update.code.visualstudio.com/latest/linux-x64/stable' | tar -xz --strip-components=1 -C "$RUNNER_TEMP/vscode"
+          curl --fail --location "https://update.code.visualstudio.com/$VSCODE_VERSION/linux-x64/stable" | tar -xz --strip-components=1 -C "$RUNNER_TEMP/vscode"
           # Tarball installs need the ownership and mode supplied by a system package.
           sudo chown root:root "$RUNNER_TEMP/vscode/chrome-sandbox"
           sudo chmod 4755 "$RUNNER_TEMP/vscode/chrome-sandbox"
@@ -22,3 +33,16 @@ jobs:
         env:
           VSCODE_EXECUTABLE: ${{ runner.temp }}/vscode/code
         run: xvfb-run -a nix develop --command pnpm test:extension
+      - name: Installed VSIX UI tests
+        env:
+          VSCODE_EXECUTABLE: ${{ runner.temp }}/vscode/code
+          VSCODE_CLI: ${{ runner.temp }}/vscode/bin/code
+        run: |
+          packages=(*.vsix)
+          ELFPREVIEW_VSIX="${packages[0]}" xvfb-run -a nix develop --command pnpm test:ui
+      - uses: actions/upload-artifact@v4
+        if: matrix.vscode == 'latest'
+        with:
+          name: extension-vsix
+          path: "*.vsix"
+          if-no-files-found: error

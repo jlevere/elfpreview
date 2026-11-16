@@ -3,6 +3,7 @@ import { connect } from "node:net";
 import { createInterface } from "node:readline";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 type Command =
   | { action: "open"; uri: string }
@@ -12,11 +13,9 @@ export async function run(): Promise<void> {
   const extension = vscode.extensions.getExtension("jlevere.elfpreview");
   assert.ok(extension);
   await extension.activate();
+  assert.ok(process.env.ELFPREVIEW_FIXTURES);
   const bytes = await readFile(
-    vscode.Uri.joinPath(
-      extension.extensionUri,
-      "rust/tests/fixtures/simple_test2",
-    ).fsPath,
+    path.join(process.env.ELFPREVIEW_FIXTURES, "simple_test2"),
   );
   let reads = 0;
   const fileChanges = new vscode.EventEmitter<vscode.FileChangeEvent[]>();

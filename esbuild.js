@@ -2,7 +2,6 @@ const esbuild = require("esbuild");
 const sveltePlugin = require("esbuild-svelte");
 const production = process.argv.includes("--production");
 const watch = process.argv.includes("--watch");
-const sveltePreprocess = require("svelte-preprocess");
 
 async function main() {
   const extensionConfig = {
@@ -13,6 +12,7 @@ async function main() {
     sourcemap: !production,
     sourcesContent: false,
     platform: "node",
+    target: "node20",
     outdir: "dist",
     external: ["vscode"],
     logLevel: "warning",
@@ -30,7 +30,6 @@ async function main() {
     outfile: "dist/webview.js",
     plugins: [
       sveltePlugin({
-        preprocess: sveltePreprocess(),
         compilerOptions: {
           dev: !production,
         },

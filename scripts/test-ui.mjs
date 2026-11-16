@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { createServer } from "node:net";
 import { createInterface } from "node:readline";
 import { once } from "node:events";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -33,6 +35,32 @@ try {
       "workbench.editor.enablePreview": false,
     }),
   );
+  let extensionPath = root;
+  if (process.env.ELFPREVIEW_VSIX) {
+    assert.ok(process.env.VSCODE_CLI, "Set VSCODE_CLI to install the VSIX");
+    await promisify(execFile)(
+      process.env.VSCODE_CLI,
+      [
+        "--user-data-dir",
+        path.join(temporary, "profile"),
+        "--extensions-dir",
+        path.join(temporary, "extensions"),
+        "--install-extension",
+        path.resolve(process.env.ELFPREVIEW_VSIX),
+        "--force",
+      ],
+      { timeout: 30_000 },
+    );
+    const installed = (await readdir(path.join(temporary, "extensions"))).find(
+      (name) => name.startsWith("jlevere.elfpreview-"),
+    );
+    assert.ok(
+      installed,
+      "VSIX must be installed in the isolated extension directory",
+    );
+    extensionPath = path.join(temporary, "extensions", installed);
+    console.log("Testing the installed VSIX");
+  }
   await build({
     entryPoints: [path.join(root, "ts/test/ui-host.ts")],
     outfile: path.join(temporary, "suite.cjs"),
@@ -56,7 +84,7 @@ try {
       "--extensions-dir",
       path.join(temporary, "extensions"),
       "--extensionDevelopmentPath",
-      root,
+      extensionPath,
       "--extensionTestsPath",
       path.join(temporary, "suite.cjs"),
       "--disable-extensions",
@@ -64,7 +92,11 @@ try {
       "--skip-welcome",
       "--skip-release-notes",
     ],
-    env: { ...process.env, ELFPREVIEW_TEST_PORT: String(address.port) },
+    env: {
+      ...process.env,
+      ELFPREVIEW_TEST_PORT: String(address.port),
+      ELFPREVIEW_FIXTURES: path.join(root, "rust/tests/fixtures"),
+    },
     timeout: 30_000,
   });
   [socket] = await connected;
@@ -97,7 +129,23 @@ try {
         ) {
           // Only the inner webview contains the extension's document.
           frame
-            .evaluate(() => document.getElementById("app") !== null)
+            .evaluate(
+              () =>
+                new Promise((resolve) => {
+                  const check = () => {
+                    if (document.getElementById("app")) {
+                      observer.disconnect();
+                      resolve(true);
+                    }
+                  };
+                  const observer = new MutationObserver(check);
+                  observer.observe(document, {
+                    childList: true,
+                    subtree: true,
+                  });
+                  check();
+                }),
+            )
             .then((found) => {
               if (found) {
                 cleanup();
@@ -200,14 +248,22 @@ try {
       await textAppears(frame, "0 of 23328 symbols");
       await frame.getByLabel("Filter symbols", { exact: true }).fill("fmt");
       await textAppears(frame, "1939 of 23328 symbols");
-      await frame.locator(".vtlist").evaluate((element) => {
-        element.scrollTop = 500;
-      });
       await frame.locator(".vtlist").evaluate(
         (element) =>
-          new Promise((resolve) => {
-            if (element.scrollTop >= 500) resolve();
-            else element.addEventListener("scroll", resolve, { once: true });
+          new Promise((resolve, reject) => {
+            const timer = setTimeout(
+              () => reject(new Error("Scroll event was not delivered")),
+              10_000,
+            );
+            element.addEventListener(
+              "scroll",
+              () => {
+                clearTimeout(timer);
+                queueMicrotask(resolve);
+              },
+              { once: true },
+            );
+            element.scrollTop = 500;
           }),
       );
       if (process.env.ELFPREVIEW_SCREENSHOT)
@@ -238,11 +294,27 @@ try {
           .getAttribute("aria-selected"),
         "true",
       );
-      assert.ok(
-        (await restored
-          .locator(".vtlist")
-          .evaluate((element) => element.scrollTop)) >= 490,
-        "Scroll offset survives hidden-view recreation",
+      await restored.locator(".vtlist").evaluate(
+        (element) =>
+          new Promise((resolve, reject) => {
+            const timer = setTimeout(() => {
+              element.removeEventListener("scroll", check);
+              reject(
+                new Error(
+                  "Scroll offset was not restored: " + element.scrollTop,
+                ),
+              );
+            }, 10_000);
+            const check = () => {
+              if (element.scrollTop >= 490) {
+                clearTimeout(timer);
+                element.removeEventListener("scroll", check);
+                resolve();
+              }
+            };
+            element.addEventListener("scroll", check);
+            check();
+          }),
       );
       await page.setViewportSize({ width: 700, height: 900 });
       assert.ok(

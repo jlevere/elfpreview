@@ -13,7 +13,7 @@ export class ElfParser {
   static async create(bytes: Uint8Array): Promise<ElfParser> {
     const context = new WasmContext.Default();
     const { instance } = await WebAssembly.instantiate(
-      bytes,
+      Uint8Array.from(bytes),
       elfpreview._.imports.create({}, context),
     );
     const memory = instance.exports.memory;
@@ -31,7 +31,9 @@ export class ElfParser {
         throw new Error(`Parser is missing the ${name} ABI exports`);
       }
       exports[key] = (...args: number[]) => {
-        const pointer: unknown = (invoke as (...args: number[]) => unknown)(...args);
+        const pointer: unknown = (invoke as (...args: number[]) => unknown)(
+          ...args,
+        );
         if (typeof pointer !== "number")
           throw new Error(`Invalid ${name} result pointer`);
         pendingCleanup = () => {

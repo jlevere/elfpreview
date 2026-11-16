@@ -36,3 +36,16 @@ test("header preserves all 64 entry-point bits", async () => {
     0xfedcba9876543210n,
   );
 });
+
+test("the shipped core Wasm has no host imports and a bounded memory", async () => {
+  const module = await WebAssembly.compile(Uint8Array.from(await wasm));
+  assert.deepEqual(WebAssembly.Module.imports(module), []);
+  const instance = await WebAssembly.instantiate(module);
+  const memory = instance.exports.memory;
+  assert.ok(memory instanceof WebAssembly.Memory);
+  assert.throws(
+    () => memory.grow(8193),
+    RangeError,
+    "Cannot grow beyond 512 MiB",
+  );
+});

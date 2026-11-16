@@ -20,6 +20,10 @@ try {
   );
   if (start < 0) throw new Error("Unexpected wit2ts world layout");
   const prefix = generated.slice(0, start);
+  for (const type of ["Elfinfo", "Fileinfo"]) {
+    if (!generated.slice(start).includes(`ptr<result<${type},`))
+      throw new Error(`Unexpected wit2ts signature for ${type}`);
+  }
   const suffix = generated
     .slice(start)
     .replaceAll("ptr<result<Elfinfo,", "ptr<result<Types.Elfinfo,")

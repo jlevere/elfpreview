@@ -86,3 +86,59 @@ test("aborting terminates a worker blocked in synchronous code", async () => {
     await rm(temporary, { recursive: true, force: true });
   }
 });
+
+test("the bounded queue rejects excess work without reading more files", async () => {
+  const parser = new ParserService(workerPath);
+  const controllers = Array.from({ length: 11 }, () => new AbortController());
+  const release: Array<(bytes: Uint8Array) => void> = [];
+  const held = controllers
+    .slice(0, 2)
+    .map((controller) =>
+      parser.parse(
+        () => new Promise<Uint8Array>((resolve) => release.push(resolve)),
+        controller.signal,
+      ),
+    );
+  const heldRejected = held.map((operation) => assert.rejects(operation));
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  assert.equal(release.length, 2);
+  let reads = 0;
+  const queued = controllers.slice(2, 10).map((controller) =>
+    assert.rejects(
+      parser.parse(() => {
+        reads++;
+        return load();
+      }, controller.signal),
+    ),
+  );
+  await assert.rejects(parser.parse(load, controllers[10].signal), /Too many/);
+  for (const controller of controllers) controller.abort();
+  for (const resolve of release) resolve(new Uint8Array());
+  await Promise.all([...heldRejected, ...queued]);
+  assert.equal(reads, 0);
+  assert.equal(
+    (await parser.parse(load, new AbortController().signal)).symbols.length,
+    23328,
+  );
+});
+
+test("file size is rechecked after reading and an already cancelled job never reads", async () => {
+  const parser = new ParserService(workerPath);
+  await assert.rejects(
+    parser.parse(
+      () => Promise.resolve(new Uint8Array(64 * 1024 * 1024 + 1)),
+      new AbortController().signal,
+    ),
+    /64 MiB/,
+  );
+  const controller = new AbortController();
+  controller.abort();
+  let reads = 0;
+  await assert.rejects(
+    parser.parse(() => {
+      reads++;
+      return load();
+    }, controller.signal),
+  );
+  assert.equal(reads, 0);
+});
