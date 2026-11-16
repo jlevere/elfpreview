@@ -1,25 +1,49 @@
 name: Check and Test
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
   workflow_call:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
+    env:
+      RUSTUP_TOOLCHAIN: "1.100.0"
     strategy:
+      fail-fast: false
       matrix:
         vscode: ["1.98.0", "latest"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@v17
-      - run: nix develop --command pnpm install --frozen-lockfile
-      - run: nix develop --command pnpm check:rust
-      - run: nix develop --command pnpm package
-      - run: nix develop --command pnpm test
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: pnpm
+      - name: Install Rust toolchain
+        run: rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal --component clippy,rustfmt --target wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: linux
+          save-if: ${{ matrix.vscode == 'latest' }}
+      - name: Install wasm-tools
+        run: |
+          curl --fail --location --output "$RUNNER_TEMP/wasm-tools.tar.gz" 'https://github.com/bytecodealliance/wasm-tools/releases/download/v1.263.0/wasm-tools-1.263.0-x86_64-linux.tar.gz'
+          echo "21c036c1740a0552124c79c6e2170cb61c5b016005671a6d5bc06cf642165431  $RUNNER_TEMP/wasm-tools.tar.gz" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/wasm-tools"
+          tar -xzf "$RUNNER_TEMP/wasm-tools.tar.gz" --strip-components=1 -C "$RUNNER_TEMP/wasm-tools"
+          echo "$RUNNER_TEMP/wasm-tools" >> "$GITHUB_PATH"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:rust
+      - run: pnpm package
+      - run: pnpm test
       - name: Install VS Code
         env:
           VSCODE_VERSION: ${{ matrix.vscode }}
@@ -32,15 +56,15 @@ jobs:
       - name: Extension host tests
         env:
           VSCODE_EXECUTABLE: ${{ runner.temp }}/vscode/code
-        run: xvfb-run -a nix develop --command pnpm test:extension
+        run: xvfb-run -a pnpm test:extension
       - name: Installed VSIX UI tests
         env:
           VSCODE_EXECUTABLE: ${{ runner.temp }}/vscode/code
           VSCODE_CLI: ${{ runner.temp }}/vscode/bin/code
         run: |
           packages=(*.vsix)
-          ELFPREVIEW_VSIX="${packages[0]}" xvfb-run -a nix develop --command pnpm test:ui
-      - uses: actions/upload-artifact@v4
+          ELFPREVIEW_VSIX="${packages[0]}" xvfb-run -a pnpm test:ui
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: matrix.vscode == 'latest'
         with:
           name: extension-vsix
