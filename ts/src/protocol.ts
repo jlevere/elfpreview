@@ -11,6 +11,7 @@ type Wire<T> = T extends bigint
 export type ElfInfo = Wire<Types.Elfinfo>;
 export type SectionInfo = ElfInfo["sectionheaders"][number];
 export type ProgramInfo = ElfInfo["programheaders"][number];
+export type RelocationInfo = ElfInfo["relocations"][number];
 export type SymbolInfo = ElfInfo["symbols"][number];
 export type DynamicInfo = ElfInfo["dynlink"];
 
@@ -41,6 +42,10 @@ export function toWire(data: Types.Elfinfo): ElfInfo {
       ...section,
       address: section.address.toString(),
       size: section.size.toString(),
+      offset: section.offset.toString(),
+      flags: section.flags.toString(),
+      alignment: section.alignment.toString(),
+      entrySize: section.entrySize.toString(),
     })),
     programheaders: data.programheaders.map((program) => ({
       ...program,
@@ -48,11 +53,23 @@ export function toWire(data: Types.Elfinfo): ElfInfo {
       paddr: program.paddr.toString(),
       filesz: program.filesz.toString(),
       memsz: program.memsz.toString(),
+      offset: program.offset.toString(),
+      alignment: program.alignment.toString(),
     })),
     symbols: data.symbols.map((symbol) => ({
       ...symbol,
       value: symbol.value.toString(),
       size: symbol.size.toString(),
+    })),
+    dynamicSymbols: data.dynamicSymbols.map((symbol) => ({
+      ...symbol,
+      value: symbol.value.toString(),
+      size: symbol.size.toString(),
+    })),
+    relocations: data.relocations.map((entry) => ({
+      ...entry,
+      offset: entry.offset.toString(),
+      addend: entry.addend?.toString(),
     })),
     dynlink: data.dynlink,
   };

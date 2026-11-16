@@ -45,6 +45,14 @@
         <dd>{data.symbols.length}</dd>
       </div>
       <div>
+        <dt>Dynamic symbols</dt>
+        <dd>{data.dynamicSymbols.length}</dd>
+      </div>
+      <div>
+        <dt>Relocations</dt>
+        <dd>{data.relocations.length}</dd>
+      </div>
+      <div>
         <dt>Sections</dt>
         <dd>{data.sectionheaders.length}</dd>
       </div>

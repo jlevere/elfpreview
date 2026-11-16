@@ -9,6 +9,7 @@
     columns,
     label,
     layout,
+    minWidth = 850,
     offset,
     onScroll,
     sort,
@@ -18,6 +19,7 @@
     columns: Array<Column<Row>>;
     label: string;
     layout: string;
+    minWidth?: number;
     offset: number;
     onScroll: (offset: number) => void;
     sort: Sort | undefined;
@@ -58,6 +60,7 @@
       role="table"
       aria-label={label}
       aria-rowcount={rows.length + 1}
+      style:min-width={minWidth + "px"}
       style:--columns="{layout} 64px"
     >
       <div class="table-row table-header" role="row">

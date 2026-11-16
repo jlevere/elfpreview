@@ -1,6 +1,6 @@
 use super::*;
-use goblin::elf::{header::*, sym};
-use scroll::Pwrite;
+use goblin::elf::{header::*, section_header, sym};
+use scroll::{Pread, Pwrite};
 
 fn fixture(name: &str) -> Vec<u8> {
     std::fs::read(
@@ -162,5 +162,213 @@ fn report_record_count_is_bounded_even_when_names_are_empty() {
             .unwrap_err()
             .to_string()
             .contains("record limit")
+    );
+}
+
+fn relocatable(class: u8, endian: u8, rela: bool) -> Vec<u8> {
+    relocatable_with_names(class, endian, rela, b"\0external_symbol\0", 1)
+}
+
+fn relocatable_with_names(
+    class: u8,
+    endian: u8,
+    rela: bool,
+    symbol_names: &[u8],
+    count: usize,
+) -> Vec<u8> {
+    use goblin::{
+        container::{Container, Ctx},
+        elf::{reloc::Reloc, section_header::SectionHeader, sym::Sym},
+    };
+    let container = if class == ELFCLASS64 {
+        Container::Big
+    } else {
+        Container::Little
+    };
+    let byte_order = if endian == ELFDATA2LSB {
+        scroll::LE
+    } else {
+        scroll::BE
+    };
+    let ctx = Ctx::new(container, byte_order);
+    let mut data = header_bytes(class, endian);
+    let mut header: Header = data.pread(0).unwrap();
+    header.e_type = ET_REL;
+    header.e_entry = 0;
+    header.e_machine = if class == ELFCLASS64 {
+        EM_X86_64
+    } else {
+        EM_386
+    };
+    let names = b"\0.text\0.strtab\0.symtab\0.reloc.text\0.shstrtab\0";
+    let mut symbols = vec![0; 2 * Sym::size(container)];
+    symbols
+        .pwrite_with(
+            Sym {
+                st_name: 1,
+                st_info: (sym::STB_GLOBAL << 4) | sym::STT_OBJECT,
+                ..Default::default()
+            },
+            Sym::size(container),
+            ctx,
+        )
+        .unwrap();
+    let mut relocations = vec![0; count * Reloc::size(rela, ctx)];
+    for index in 0..count {
+        relocations
+            .pwrite_with(
+                Reloc {
+                    r_offset: 0x10,
+                    r_sym: 1,
+                    r_type: 1,
+                    r_addend: rela.then_some(-7),
+                },
+                index * Reloc::size(rela, ctx),
+                (rela, ctx),
+            )
+            .unwrap();
+    }
+    let payloads: [&[u8]; 5] = [&[0; 32], symbol_names, &symbols, &relocations, names];
+    let mut sections = vec![SectionHeader::default()];
+    for (index, payload) in payloads.iter().enumerate() {
+        let mut section = SectionHeader {
+            sh_offset: data.len() as u64,
+            sh_size: payload.len() as u64,
+            sh_addralign: 1,
+            ..Default::default()
+        };
+        match index {
+            0 => {
+                section.sh_name = 1;
+                section.sh_type = section_header::SHT_PROGBITS;
+                section.sh_flags = 6;
+                section.sh_addralign = 16;
+            }
+            1 => {
+                section.sh_name = 7;
+                section.sh_type = section_header::SHT_STRTAB;
+            }
+            2 => {
+                section.sh_name = 15;
+                section.sh_type = SHT_SYMTAB;
+                section.sh_link = 2;
+                section.sh_entsize = Sym::size(container) as u64;
+            }
+            3 => {
+                section.sh_name = 23;
+                section.sh_type = if rela {
+                    section_header::SHT_RELA
+                } else {
+                    section_header::SHT_REL
+                };
+                section.sh_link = 3;
+                section.sh_info = 1;
+                section.sh_entsize = Reloc::size(rela, ctx) as u64;
+            }
+            _ => {
+                section.sh_name = 35;
+                section.sh_type = section_header::SHT_STRTAB;
+            }
+        }
+        sections.push(section);
+        data.extend_from_slice(payload);
+    }
+    header.e_shoff = data.len() as u64;
+    header.e_shnum = sections.len() as u16;
+    header.e_shentsize = if class == ELFCLASS64 { 64 } else { 40 };
+    header.e_shstrndx = 5;
+    data.resize(
+        data.len() + sections.len() * usize::from(header.e_shentsize),
+        0,
+    );
+    for (index, section) in sections.iter().enumerate() {
+        data.pwrite_with(
+            section.clone(),
+            header.e_shoff as usize + index * usize::from(header.e_shentsize),
+            ctx,
+        )
+        .unwrap();
+    }
+    data.pwrite(header, 0).unwrap();
+    data
+}
+
+#[test]
+fn relocation_semantics_work_for_all_classes_byte_orders_and_addend_forms() {
+    for class in [ELFCLASS32, ELFCLASS64] {
+        for endian in [ELFDATA2LSB, ELFDATA2MSB] {
+            for rela in [false, true] {
+                let result = parse(&relocatable(class, endian, rela)).unwrap();
+                assert_eq!(result.info.filetype, "REL");
+                assert_eq!(result.sectionheaders[1].flags, 6);
+                assert_eq!(result.sectionheaders[1].alignment, 16);
+                assert_eq!(result.symbols[1].index, 1);
+                assert_eq!(result.symbols[1].section_index, 0);
+                assert_eq!(result.relocations.len(), 1);
+                let entry = &result.relocations[0];
+                assert_eq!(entry.offset, 0x10);
+                assert_eq!(entry.target_section.as_deref(), Some(".text"));
+                assert_eq!(entry.symbol_name.as_deref(), Some("external_symbol"));
+                assert_eq!(entry.symbol_index, 1);
+                assert_eq!(entry.addend, rela.then_some(-7));
+                assert_eq!(entry.type_id, 1);
+            }
+        }
+    }
+}
+
+#[test]
+fn dynamic_symbols_and_relocations_survive_missing_section_headers() {
+    let mut data = fixture("simple_test");
+    let full = parse(&data).unwrap();
+    assert!(!full.dynamic_symbols.is_empty());
+    assert_eq!(full.relocations.len(), 66);
+    let free = full
+        .relocations
+        .iter()
+        .find(|entry| entry.symbol_name.as_deref() == Some("free"))
+        .unwrap();
+    assert_eq!(free.offset, 0x9000);
+    assert_eq!(free.type_name, "R_X86_64_JUMP_SLOT");
+    assert_eq!(free.addend, Some(0));
+    // ELF64 e_shoff, e_shnum, and e_shstrndx: leave the PT_DYNAMIC image intact.
+    data[40..48].fill(0);
+    data[60..64].fill(0);
+    let bare = parse(&data).unwrap();
+    assert!(bare.sectionheaders.is_empty());
+    assert_eq!(bare.dynamic_symbols.len(), full.dynamic_symbols.len());
+    assert_eq!(
+        bare.relocations.len(),
+        full.relocations.len(),
+        "dynamic and section views must not duplicate entries"
+    );
+    for (a, b) in bare.relocations.iter().zip(&full.relocations) {
+        assert_eq!(a.offset, b.offset);
+        assert_eq!(a.symbol_name, b.symbol_name);
+        assert_eq!(a.addend, b.addend);
+    }
+}
+
+#[test]
+fn malformed_relocation_symbol_links_are_reported() {
+    let mut data = relocatable(ELFCLASS64, ELFDATA2LSB, true);
+    let elf = Elf::parse(&data).unwrap();
+    let link = elf.header.e_shoff as usize + 4 * 64 + 40;
+    data.pwrite_with(999u32, link, scroll::LE).unwrap();
+    assert!(parse(&data).unwrap_err().to_string().contains("sh_link"));
+}
+
+#[test]
+fn relocation_symbol_names_share_the_report_text_budget() {
+    let mut names = vec![b'x'; 1024 * 1024 + 2];
+    names[0] = 0;
+    *names.last_mut().unwrap() = 0;
+    let data = relocatable_with_names(ELFCLASS64, ELFDATA2LSB, true, &names, 40);
+    assert!(data.len() < 2 * 1024 * 1024);
+    assert!(
+        parse(&data)
+            .unwrap_err()
+            .to_string()
+            .contains("32 MiB text limit")
     );
 }

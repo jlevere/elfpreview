@@ -2,6 +2,11 @@ package elfpreview:parser;
 
 interface types {
   record sectioninfo {
+    index: u32,
+    offset: u64,
+    %flags: u64,
+    alignment: u64,
+    entry-size: u64,
     name: string,
     size: u64,
     address: u64,
@@ -9,6 +14,8 @@ interface types {
   }
 
   record programinfo {
+    offset: u64,
+    alignment: u64,
     typename: string,
     flagstring: string,
     vaddr: u64,
@@ -18,6 +25,8 @@ interface types {
   }
 
   record symbolinfo {
+    index: u32,
+    section-index: u32,
     name: string,
     typestr: string,
     bind: string,
@@ -46,11 +55,24 @@ interface types {
     runpath: option<list<string>>,
   }
 
+  record relocationinfo {
+    table: string,
+    target-section: option<string>,
+    offset: u64,
+    type-id: u32,
+    type-name: string,
+    symbol-index: u32,
+    symbol-name: option<string>,
+    addend: option<s64>,
+  }
+
   record elfinfo {
     info: fileinfo,
     sectionheaders: list<sectioninfo>,
     programheaders: list<programinfo>,
     symbols: list<symbolinfo>,
+    dynamic-symbols: list<symbolinfo>,
+    relocations: list<relocationinfo>,
     dynlink: dynlinkinfo,
   }
 }

@@ -2,6 +2,7 @@ wit_bindgen::generate!({ path: "../wit/", world: "elfpreview" });
 
 mod limits;
 mod metadata;
+mod relocations;
 mod tables;
 #[cfg(test)]
 mod tests;
@@ -15,7 +16,8 @@ struct ElfParser;
 fn parse(data: &[u8]) -> goblin::error::Result<types::Elfinfo> {
     metadata::parse_header(data)?;
     let elf = Elf::parse(data)?;
-    limits::check_report(&elf)?;
+    let mut budget = limits::check_report(&elf)?;
+    let relocations = relocations::build(data, &elf, &mut budget)?;
     let stripped = !elf
         .section_headers
         .iter()
@@ -24,7 +26,9 @@ fn parse(data: &[u8]) -> goblin::error::Result<types::Elfinfo> {
         info: metadata::file_info(&elf.header, stripped)?,
         sectionheaders: tables::build_section_info(&elf),
         programheaders: tables::build_program_info(&elf),
-        symbols: tables::build_sym_info(&elf),
+        symbols: tables::build_sym_info(&elf.syms, &elf.strtab),
+        dynamic_symbols: tables::build_sym_info(&elf.dynsyms, &elf.dynstrtab),
+        relocations,
         dynlink: tables::build_dynlink_info(&elf),
     })
 }

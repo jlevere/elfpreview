@@ -4,10 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u64, u32, i32, i64, ptr, result } from '@vscode/wasm-component-model';
+import type { u32, u64, s64, i32, i64, ptr, result } from '@vscode/wasm-component-model';
 
 export namespace Types {
 	export type Sectioninfo = {
+		index: u32;
+		offset: u64;
+		flags: u64;
+		alignment: u64;
+		entrySize: u64;
 		name: string;
 		size: u64;
 		address: u64;
@@ -15,6 +20,8 @@ export namespace Types {
 	};
 
 	export type Programinfo = {
+		offset: u64;
+		alignment: u64;
 		typename: string;
 		flagstring: string;
 		vaddr: u64;
@@ -24,6 +31,8 @@ export namespace Types {
 	};
 
 	export type Symbolinfo = {
+		index: u32;
+		sectionIndex: u32;
 		name: string;
 		typestr: string;
 		bind: string;
@@ -52,11 +61,24 @@ export namespace Types {
 		runpath?: string[] | undefined;
 	};
 
+	export type Relocationinfo = {
+		table: string;
+		targetSection?: string | undefined;
+		offset: u64;
+		typeId: u32;
+		typeName: string;
+		symbolIndex: u32;
+		symbolName?: string | undefined;
+		addend?: s64 | undefined;
+	};
+
 	export type Elfinfo = {
 		info: Fileinfo;
 		sectionheaders: Sectioninfo[];
 		programheaders: Programinfo[];
 		symbols: Symbolinfo[];
+		dynamicSymbols: Symbolinfo[];
+		relocations: Relocationinfo[];
 		dynlink: Dynlinkinfo;
 	};
 }
@@ -96,12 +118,19 @@ export namespace elfpreview {
 
 export namespace Types.$ {
 	export const Sectioninfo = new $wcm.RecordType<Types.Sectioninfo>([
+		['index', $wcm.u32],
+		['offset', $wcm.u64],
+		['flags', $wcm.u64],
+		['alignment', $wcm.u64],
+		['entrySize', $wcm.u64],
 		['name', $wcm.wstring],
 		['size', $wcm.u64],
 		['address', $wcm.u64],
 		['typename', $wcm.wstring],
 	]);
 	export const Programinfo = new $wcm.RecordType<Types.Programinfo>([
+		['offset', $wcm.u64],
+		['alignment', $wcm.u64],
 		['typename', $wcm.wstring],
 		['flagstring', $wcm.wstring],
 		['vaddr', $wcm.u64],
@@ -110,6 +139,8 @@ export namespace Types.$ {
 		['memsz', $wcm.u64],
 	]);
 	export const Symbolinfo = new $wcm.RecordType<Types.Symbolinfo>([
+		['index', $wcm.u32],
+		['sectionIndex', $wcm.u32],
 		['name', $wcm.wstring],
 		['typestr', $wcm.wstring],
 		['bind', $wcm.wstring],
@@ -135,11 +166,23 @@ export namespace Types.$ {
 		['rpath', new $wcm.OptionType<string[]>(new $wcm.ListType<string>($wcm.wstring))],
 		['runpath', new $wcm.OptionType<string[]>(new $wcm.ListType<string>($wcm.wstring))],
 	]);
+	export const Relocationinfo = new $wcm.RecordType<Types.Relocationinfo>([
+		['table', $wcm.wstring],
+		['targetSection', new $wcm.OptionType<string>($wcm.wstring)],
+		['offset', $wcm.u64],
+		['typeId', $wcm.u32],
+		['typeName', $wcm.wstring],
+		['symbolIndex', $wcm.u32],
+		['symbolName', new $wcm.OptionType<string>($wcm.wstring)],
+		['addend', new $wcm.OptionType<s64>($wcm.s64)],
+	]);
 	export const Elfinfo = new $wcm.RecordType<Types.Elfinfo>([
 		['info', Fileinfo],
 		['sectionheaders', new $wcm.ListType<Types.Sectioninfo>(Sectioninfo)],
 		['programheaders', new $wcm.ListType<Types.Programinfo>(Programinfo)],
 		['symbols', new $wcm.ListType<Types.Symbolinfo>(Symbolinfo)],
+		['dynamicSymbols', new $wcm.ListType<Types.Symbolinfo>(Symbolinfo)],
+		['relocations', new $wcm.ListType<Types.Relocationinfo>(Relocationinfo)],
 		['dynlink', Dynlinkinfo],
 	]);
 }
@@ -152,6 +195,7 @@ export namespace Types._ {
 		['Symbolinfo', $.Symbolinfo],
 		['Fileinfo', $.Fileinfo],
 		['Dynlinkinfo', $.Dynlinkinfo],
+		['Relocationinfo', $.Relocationinfo],
 		['Elfinfo', $.Elfinfo]
 	]);
 	export type WasmInterface = {
