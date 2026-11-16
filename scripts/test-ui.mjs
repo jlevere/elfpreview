@@ -11,6 +11,23 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
 import { _electron } from "playwright";
 
+async function withDeadline(operation, description) {
+  let deadline;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise((_, reject) => {
+        deadline = setTimeout(
+          () => reject(new Error(description + " timed out after 30 seconds")),
+          30_000,
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(deadline);
+  }
+}
+
 const root = fileURLToPath(new URL("../", import.meta.url));
 const temporary = await mkdtemp(
   path.join(
@@ -73,9 +90,12 @@ try {
   await once(server, "listening");
   const address = server.address();
   assert.ok(address && typeof address !== "string");
-  const connected = once(server, "connection", {
-    signal: AbortSignal.timeout(30_000),
-  });
+  const connected = new Promise((resolve) =>
+    server.once("connection", (peer) => {
+      socket = peer;
+      resolve();
+    }),
+  );
   app = await _electron.launch({
     executablePath: process.env.VSCODE_EXECUTABLE,
     args: [
@@ -99,14 +119,16 @@ try {
     },
     timeout: 30_000,
   });
-  [socket] = await connected;
+  await withDeadline(connected, "Extension host connection");
   const messages = createInterface({ input: socket });
   // A queued async iterator preserves messages arriving during Electron startup.
   const replies = messages[Symbol.asyncIterator]();
-  assert.deepEqual(JSON.parse((await replies.next()).value), { ready: true });
+  const nextReply = () =>
+    withDeadline(replies.next(), "Extension host response");
+  assert.deepEqual(JSON.parse((await nextReply()).value), { ready: true });
   const command = async (value) => {
     socket.write(JSON.stringify(value) + "\n");
-    const reply = await replies.next();
+    const reply = await nextReply();
     assert.ok(!reply.done, "Extension host disconnected");
     assert.deepEqual(JSON.parse(reply.value), { ok: true });
   };
@@ -158,6 +180,13 @@ try {
       page.on("framenavigated", check);
       for (const frame of page.frames()) check(frame);
     });
+  const openView = async (uri, exclude = new Set()) => {
+    const [frame] = await Promise.all([
+      frameReady(exclude),
+      command({ action: "open", uri }),
+    ]);
+    return frame;
+  };
   const settled = (frame) =>
     frame.evaluate(
       () =>
@@ -213,12 +242,9 @@ try {
     ["go-away", "Big Endian"],
     ["phdr.73prg.bin", "73"],
   ]) {
-    const framePromise = frameReady();
-    await command({
-      action: "open",
-      uri: pathToFileURL(path.join(root, "rust/tests/fixtures", fixture)).href,
-    });
-    const frame = await framePromise;
+    const frame = await openView(
+      pathToFileURL(path.join(root, "rust/tests/fixtures", fixture)).href,
+    );
     const text = await settled(frame);
     assert.ok(text.includes(fixture));
     assert.ok(
@@ -236,8 +262,9 @@ try {
       );
       await page.keyboard.press("ArrowRight");
       await textAppears(frame, "23328 of 23328 symbols");
+      const renderedRows = await frame.getByRole("row").count();
       assert.ok(
-        (await frame.getByRole("row").count()) < 100,
+        renderedRows > 1 && renderedRows < 100,
         "Large symbol tables must remain virtualized",
       );
       await frame.getByLabel("Filter symbols", { exact: true }).fill("FMT");
@@ -266,27 +293,32 @@ try {
             element.scrollTop = 500;
           }),
       );
+      // The normalized filter stays the same: preserve both visible and saved scroll.
+      await frame.getByLabel("Filter symbols", { exact: true }).fill("FMT");
+      assert.ok(
+        (await frame
+          .locator(".vtlist")
+          .evaluate((element) => element.scrollTop)) >= 490,
+      );
       if (process.env.ELFPREVIEW_SCREENSHOT)
         await page.screenshot({ path: process.env.ELFPREVIEW_SCREENSHOT });
-      const detached = page.waitForEvent("framedetached", {
-        predicate: (candidate) => candidate === frame,
-        timeout: 20_000,
-      });
-      await command({ action: "hide" });
-      await detached;
-      const restoredPromise = frameReady(new Set(page.frames()));
-      await command({
-        action: "open",
-        uri: pathToFileURL(path.join(root, "rust/tests/fixtures", fixture))
-          .href,
-      });
-      const restored = await restoredPromise;
+      await Promise.all([
+        page.waitForEvent("framedetached", {
+          predicate: (candidate) => candidate === frame,
+          timeout: 20_000,
+        }),
+        command({ action: "hide" }),
+      ]);
+      const restored = await openView(
+        pathToFileURL(path.join(root, "rust/tests/fixtures", fixture)).href,
+        new Set(page.frames()),
+      );
       await textAppears(restored, "1939 of 23328 symbols");
       assert.equal(
         await restored
           .getByLabel("Filter symbols", { exact: true })
           .inputValue(),
-        "fmt",
+        "FMT",
       );
       assert.equal(
         await restored
@@ -330,21 +362,36 @@ try {
     console.log(`Rendered ${fixture} in VS Code`);
     await command({ action: "close" });
   }
-  const virtualPromise = frameReady();
-  await command({ action: "open", uri: "elfpreview-test:/virtual-elf" });
-  const virtual = await virtualPromise;
+  const virtual = await openView("elfpreview-test:/virtual-elf");
   assert.ok((await settled(virtual)).includes("23328"));
-  const splitPromise = frameReady(new Set(page.frames()));
-  await command({ action: "split" });
-  assert.ok((await settled(await splitPromise)).includes("23328"));
+  const [split] = await Promise.all([
+    frameReady(new Set(page.frames())),
+    command({ action: "split" }),
+  ]);
+  assert.ok((await settled(split)).includes("23328"));
   await command({ action: "assertSingleRead" });
   await command({ action: "close" });
   console.log("Virtual filesystem and split views share one document parse");
+  const elf32 = Buffer.alloc(52);
+  elf32.set([0x7f, 0x45, 0x4c, 0x46, 1, 2, 1, 10]);
+  elf32.writeUInt16BE(2, 16);
+  elf32.writeUInt16BE(3, 18);
+  elf32.writeUInt32BE(1, 20);
+  elf32.writeUInt16BE(52, 40);
+  const elf32Path = path.join(temporary, "elf32-big-endian");
+  await writeFile(elf32Path, elf32);
+  const elf32View = await openView(pathToFileURL(elf32Path).href);
+  const elf32Text = await settled(elf32View);
+  for (const expected of ["ELF32", "Big Endian", "TRU64", "0x00000000"])
+    assert.ok(elf32Text.includes(expected));
+  assert.equal(await elf32View.getByRole("row").count(), 0);
+  await command({ action: "close" });
+  console.log(
+    "ELF32 big-endian headers and zero entry points render correctly",
+  );
   const malformed = path.join(temporary, "<img onerror=alert(1)>");
   await writeFile(malformed, "not an ELF");
-  const framePromise = frameReady();
-  await command({ action: "open", uri: pathToFileURL(malformed).href });
-  const frame = await framePromise;
+  const frame = await openView(pathToFileURL(malformed).href);
   assert.ok((await settled(frame)).includes("Unable to preview ELF"));
   assert.equal(await frame.locator("img").count(), 0);
   assert.equal(await frame.locator("[role=status]").count(), 0);

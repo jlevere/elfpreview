@@ -9,7 +9,6 @@ type Wire<T> = T extends bigint
       : T;
 
 export type ElfInfo = Wire<Types.Elfinfo>;
-export type FileInfo = ElfInfo["info"];
 export type SectionInfo = ElfInfo["sectionheaders"][number];
 export type ProgramInfo = ElfInfo["programheaders"][number];
 export type SymbolInfo = ElfInfo["symbols"][number];

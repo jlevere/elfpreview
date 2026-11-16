@@ -102,8 +102,9 @@
         type="search"
         value={filter}
         oninput={(event) => {
-          filter = event.currentTarget.value;
-          offsets.symbols = 0;
+          const next = event.currentTarget.value;
+          if (next.toLowerCase() !== query) offsets.symbols = 0;
+          filter = next;
         }}
       />
       <span role="status"

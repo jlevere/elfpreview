@@ -20,14 +20,12 @@ try {
   );
   if (start < 0) throw new Error("Unexpected wit2ts world layout");
   const prefix = generated.slice(0, start);
-  for (const type of ["Elfinfo", "Fileinfo"]) {
-    if (!generated.slice(start).includes(`ptr<result<${type},`))
-      throw new Error(`Unexpected wit2ts signature for ${type}`);
-  }
+  const signature = "ptr<result<Elfinfo,";
+  if (!generated.slice(start).includes(signature))
+    throw new Error("Unexpected wit2ts parseelf signature");
   const suffix = generated
     .slice(start)
-    .replaceAll("ptr<result<Elfinfo,", "ptr<result<Types.Elfinfo,")
-    .replaceAll("ptr<result<Fileinfo,", "ptr<result<Types.Fileinfo,");
+    .replaceAll(signature, "ptr<result<Types.Elfinfo,");
   generated = prefix + suffix;
   const target = "ts/src/generated/elfpreview.ts";
   if (process.argv.includes("--check")) {

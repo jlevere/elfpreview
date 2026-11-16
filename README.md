@@ -25,7 +25,7 @@ This extension is designed to analyze ELF files by:
 
 - Presenting a detailed webview with a simple, efficient UI built with Svelte 5.
 
-- Handling binaries up to 64 MiB with virtualized tables for large symbol lists.
+- Handling binaries up to 64 MiB, with reports limited to 250,000 records and 32 MiB of text, and virtualized tables for large symbol lists.
 
 It is implemented using a combination of Rust (via the [libgoblin](https://github.com/m4b/goblin) library running in WebAssembly) and TypeScript. The parser is a core WebAssembly module built for `wasm32-unknown-unknown`, with [WIT types](https://component-model.bytecodealliance.org/design/wit.html) and canonical ABI bindings. It has no WASI imports and is not a packaged WebAssembly component.
 
@@ -103,7 +103,7 @@ How files are processed:
 
    - The Rust-based parser (using libgoblin) processes the file.
 
-   - The worker returns one typed result; views receive it after a ready handshake. Closing the document cancels unfinished work.
+   - The worker returns one typed result; views receive it after a ready handshake. Closing the document cancels unfinished parsing; filesystem reads already in progress finish through VS Code’s API.
 
 3. Communication: Type sharing between TypeScript and WebAssembly uses WIT and canonical ABI bindings, with stubs generated using [Microsoft's wit2ts tool](https://github.com/microsoft/vscode-wasm/blob/main/wasm-component-model/bin/wit2ts).
 

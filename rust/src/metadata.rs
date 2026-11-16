@@ -13,7 +13,7 @@ pub(crate) fn parse_header(data: &[u8]) -> Result<Header> {
     Ok(header)
 }
 
-pub(crate) fn file_info(header: &Header, stripped: Option<bool>) -> Result<Fileinfo> {
+pub(crate) fn file_info(header: &Header, stripped: bool) -> Result<Fileinfo> {
     Ok(Fileinfo {
         machine: machine_to_str(header.e_machine).into(),
         entrypoint: header.e_entry,

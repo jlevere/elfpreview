@@ -15,10 +15,15 @@ export function connectView(
   },
   snapshot: () => PreviewState,
   onChange: Subscribe<PreviewState>,
+  onError: (error: unknown) => void,
 ): Disposable {
   let ready = false;
   const send = (state: PreviewState) => {
-    if (ready) void port.postMessage({ type: "state", state });
+    if (ready) {
+      void Promise.resolve(port.postMessage({ type: "state", state })).catch(
+        onError,
+      );
+    }
   };
   const messages = port.onDidReceiveMessage((message) => {
     if (isReadyMessage(message)) {

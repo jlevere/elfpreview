@@ -5,9 +5,7 @@ import { connectView, webviewHtml } from "./view";
 
 const viewType = "elfpreview.elfViewer";
 
-class ElfPreviewProvider
-  implements vscode.CustomReadonlyEditorProvider<ElfDocument>
-{
+class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider<ElfDocument> {
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly parser: ParserService,
@@ -28,6 +26,7 @@ class ElfPreviewProvider
       panel.webview,
       () => document.snapshot,
       document.onDidChange,
+      (error) => this.log.error("Failed to update ELF preview", error),
     );
     panel.onDidDispose(() => connection.dispose());
     const dist = vscode.Uri.joinPath(this.extensionUri, "dist");

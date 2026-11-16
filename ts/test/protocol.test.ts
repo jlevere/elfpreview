@@ -37,6 +37,7 @@ test("ready handshake replays the current snapshot and disposes subscriptions", 
         },
       };
     },
+    (error) => assert.fail(String(error)),
   );
   state = {
     filename: state.filename,
@@ -67,4 +68,34 @@ test("wire data is JSON safe and retains exact 64-bit values", async () => {
   assert.equal(wire.info.entrypoint, "18364758544493064720");
   assert.doesNotThrow(() => JSON.stringify(wire));
   assert.equal(typeof wire.programheaders[0].vaddr, "string");
+});
+
+test("failed webview delivery is reported without an unhandled rejection", async () => {
+  const events = new EventEmitter();
+  const failure = new Error("Webview transport closed");
+  let report!: (error: unknown) => void;
+  const reported = new Promise<unknown>((resolve) => {
+    report = resolve;
+  });
+  const connection = connectView(
+    {
+      onDidReceiveMessage(listener) {
+        events.on("message", listener);
+        return {
+          dispose() {
+            events.off("message", listener);
+          },
+        };
+      },
+      postMessage() {
+        return Promise.reject(failure);
+      },
+    },
+    () => ({ filename: "sample", status: "loading" }),
+    () => ({ dispose() {} }),
+    report,
+  );
+  events.emit("message", { type: "ready" });
+  assert.equal(await reported, failure);
+  connection.dispose();
 });

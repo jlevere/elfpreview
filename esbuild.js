@@ -38,21 +38,17 @@ async function main() {
     conditions: ["svelte"],
   };
 
-  const ctx = await esbuild.context({
-    ...extensionConfig,
-    plugins: [esbuildProblemMatcherPlugin],
-  });
-
-  const webviewCtx = await esbuild.context(webviewConfig);
-
+  const configs = [
+    { ...extensionConfig, plugins: [esbuildProblemMatcherPlugin] },
+    webviewConfig,
+  ];
   if (watch) {
-    await ctx.watch();
-    await webviewCtx.watch();
+    for (const config of configs) {
+      const context = await esbuild.context(config);
+      await context.watch();
+    }
   } else {
-    await ctx.rebuild();
-    await webviewCtx.rebuild();
-    await ctx.dispose();
-    await webviewCtx.dispose();
+    await Promise.all(configs.map((config) => esbuild.build(config)));
   }
 }
 

@@ -21,37 +21,31 @@ export class ElfParser {
       throw new Error("Parser has no exported memory");
     context.initialize(new Memory.Default(instance.exports));
 
-    let pendingCleanup: (() => void) | undefined;
-    const exports = { ...instance.exports };
-    for (const name of ["parseelf", "quickparseelf", "validateelf"]) {
-      const key = `${interfaceName}#${name}`;
-      const invoke = exports[key];
-      const postReturn = exports[`cabi_post_${key}`];
-      if (typeof invoke !== "function" || typeof postReturn !== "function") {
-        throw new Error(`Parser is missing the ${name} ABI exports`);
-      }
-      exports[key] = (...args: number[]) => {
-        const pointer: unknown = (invoke as (...args: number[]) => unknown)(
-          ...args,
-        );
-        if (typeof pointer !== "number")
-          throw new Error(`Invalid ${name} result pointer`);
-        pendingCleanup = () => {
-          (postReturn as (pointer: number) => void)(pointer);
-        };
-        return pointer;
-      };
+    const key = `${interfaceName}#parseelf`;
+    const invoke = instance.exports[key];
+    const postReturn = instance.exports[`cabi_post_${key}`];
+    if (typeof invoke !== "function" || typeof postReturn !== "function") {
+      throw new Error("Parser is missing the parseelf ABI exports");
     }
+    let resultPointer: number | undefined;
+    const exports = {
+      ...instance.exports,
+      [key]: (...args: number[]) => {
+        const pointer: unknown = Reflect.apply(invoke, undefined, args);
+        if (typeof pointer !== "number")
+          throw new Error("Invalid parseelf result pointer");
+        resultPointer = pointer;
+        return pointer;
+      },
+    };
     // The generated raw export declaration describes an out-parameter ABI.
     // wit-bindgen exports return pointers instead; the runtime lifts those correctly.
-    const api = elfpreview._.exports.bind(
-      exports as unknown as elfpreview._.Exports,
-      context,
-    );
+    const api = elfpreview._.exports.bind(exports, context);
     return new ElfParser(api, memory, () => {
-      const release = pendingCleanup;
-      pendingCleanup = undefined;
-      release?.();
+      const pointer = resultPointer;
+      resultPointer = undefined;
+      if (pointer !== undefined)
+        Reflect.apply(postReturn, undefined, [pointer]);
     });
   }
 
@@ -62,22 +56,6 @@ export class ElfParser {
   parse(data: Uint8Array): Types.Elfinfo {
     try {
       return this.api.elfparser.parseelf(data);
-    } finally {
-      this.cleanup();
-    }
-  }
-
-  header(data: Uint8Array): Types.Fileinfo {
-    try {
-      return this.api.elfparser.quickparseelf(data);
-    } finally {
-      this.cleanup();
-    }
-  }
-
-  validate(data: Uint8Array): boolean {
-    try {
-      return this.api.elfparser.validateelf(data);
     } finally {
       this.cleanup();
     }

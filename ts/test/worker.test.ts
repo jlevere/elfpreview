@@ -142,3 +142,41 @@ test("file size is rechecked after reading and an already cancelled job never re
   );
   assert.equal(reads, 0);
 });
+
+test("repeated symbol names fail at the report limit without returning an expanded result", async () => {
+  const bytes = await load();
+  // Mutate the fixture's ELF64 little-endian symbol table, keeping its size unchanged.
+  const sections = Number(bytes.readBigUInt64LE(40));
+  const stride = bytes.readUInt16LE(58);
+  const count = bytes.readUInt16LE(60);
+  const table = Array.from(
+    { length: count },
+    (_, index) => sections + index * stride,
+  ).find((offset) => bytes.readUInt32LE(offset + 4) === 2);
+  assert.ok(table !== undefined);
+  const offset = Number(bytes.readBigUInt64LE(table + 24));
+  const size = Number(bytes.readBigUInt64LE(table + 32));
+  const entrySize = Number(bytes.readBigUInt64LE(table + 56));
+  const namesHeader = sections + bytes.readUInt32LE(table + 40) * stride;
+  const namesStart = Number(bytes.readBigUInt64LE(namesHeader + 24));
+  const namesSize = Number(bytes.readBigUInt64LE(namesHeader + 32));
+  const names = bytes.subarray(namesStart, namesStart + namesSize);
+  let longest = 0;
+  let length = 0;
+  for (let index = 0; index < size; index += entrySize) {
+    const name = bytes.readUInt32LE(offset + index);
+    const end = names.indexOf(0, name);
+    if (end - name > length) {
+      longest = name;
+      length = end - name;
+    }
+  }
+  assert.ok((length * size) / entrySize > 32 * 1024 * 1024);
+  for (let index = 0; index < size; index += entrySize)
+    bytes.writeUInt32LE(longest, offset + index);
+  const parser = new ParserService(workerPath);
+  await assert.rejects(
+    parser.parse(() => Promise.resolve(bytes), new AbortController().signal),
+    /32 MiB text limit/,
+  );
+});

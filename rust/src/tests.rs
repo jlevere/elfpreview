@@ -32,23 +32,19 @@ fn all_classes_and_byte_orders() {
     for class in [ELFCLASS32, ELFCLASS64] {
         for endian in [ELFDATA2LSB, ELFDATA2MSB] {
             let data = header_bytes(class, endian);
-            let quick = ElfParser::quickparseelf(data.clone()).unwrap();
             let full = parse(&data).unwrap().info;
-            assert_eq!(quick.entrypoint, 0x12345678);
-            assert_eq!(quick.entrypoint, full.entrypoint);
-            assert_eq!(quick.machine, "386");
-            assert_eq!(quick.class, class_to_str(class));
+            assert_eq!(full.entrypoint, 0x12345678);
+            assert_eq!(full.machine, "386");
+            assert_eq!(full.class, class_to_str(class));
             assert_eq!(
-                quick.endianness,
+                full.endianness,
                 if endian == ELFDATA2LSB {
                     "Little Endian"
                 } else {
                     "Big Endian"
                 }
             );
-            assert_eq!(quick.stripped, None);
-            assert_eq!(full.stripped, Some(true));
-            assert!(ElfParser::validateelf(data).unwrap());
+            assert!(full.stripped);
         }
     }
 }
@@ -58,8 +54,7 @@ fn invalid_headers_never_produce_default_metadata() {
     for class in [ELFCLASS32, ELFCLASS64] {
         let valid = header_bytes(class, ELFDATA2LSB);
         for length in 0..valid.len() {
-            assert!(ElfParser::quickparseelf(valid[..length].to_vec()).is_err());
-            assert!(ElfParser::validateelf(valid[..length].to_vec()).is_err());
+            assert!(parse(&valid[..length]).is_err());
         }
         for (offset, value) in [
             (0, 0),
@@ -70,7 +65,6 @@ fn invalid_headers_never_produce_default_metadata() {
         ] {
             let mut invalid = valid.clone();
             invalid[offset] = value;
-            assert!(ElfParser::quickparseelf(invalid.clone()).is_err());
             assert!(parse(&invalid).is_err());
         }
     }
@@ -85,12 +79,9 @@ fn known_fixtures_have_exact_metadata() {
     ] {
         let data = fixture(name);
         let info = parse(&data).unwrap().info;
-        let header = ElfParser::quickparseelf(data).unwrap();
         assert_eq!(info.machine, machine);
         assert_eq!(info.entrypoint, entry);
-        assert_eq!(header.entrypoint, entry);
-        assert_eq!(header.endianness, info.endianness);
-        assert_eq!(info.stripped, Some(stripped));
+        assert_eq!(info.stripped, stripped);
     }
     assert_eq!(
         parse(&fixture("phdr.73prg.bin"))
@@ -125,4 +116,51 @@ fn symbol_visibility_comes_from_other_not_type() {
     assert_eq!(parsed.symbols.len(), 23328);
     assert_eq!(parsed.symbols[1].typestr, "FUNC");
     assert_eq!(parsed.symbols[1].vis, "HIDDEN");
+}
+
+#[test]
+fn repeated_long_names_cannot_expand_a_small_file_into_a_huge_report() {
+    let mut data = fixture("simple_test2");
+    let elf = Elf::parse(&data).unwrap();
+    let symbol = elf
+        .syms
+        .iter()
+        .max_by_key(|symbol| elf.strtab.get_at(symbol.st_name).unwrap_or("").len())
+        .unwrap();
+    let name = u32::try_from(symbol.st_name).unwrap();
+    assert!(elf.strtab.get_at(symbol.st_name).unwrap().len() * elf.syms.len() > 32 * 1024 * 1024);
+    let table = elf
+        .section_headers
+        .iter()
+        .find(|section| section.sh_type == SHT_SYMTAB)
+        .unwrap();
+    let count = elf.syms.len();
+    let offset = table.sh_offset as usize;
+    let stride = table.sh_entsize as usize;
+    for index in 0..count {
+        data.pwrite_with(name, offset + index * stride, scroll::LE)
+            .unwrap();
+    }
+    assert!(
+        parse(&data)
+            .unwrap_err()
+            .to_string()
+            .contains("32 MiB text limit")
+    );
+}
+
+#[test]
+fn report_record_count_is_bounded_even_when_names_are_empty() {
+    let data = header_bytes(ELFCLASS64, ELFDATA2LSB);
+    let mut elf = Elf::parse(&data).unwrap();
+    elf.program_headers.resize(
+        250_001,
+        goblin::elf::program_header::ProgramHeader::default(),
+    );
+    assert!(
+        limits::check_report(&elf)
+            .unwrap_err()
+            .to_string()
+            .contains("record limit")
+    );
 }
