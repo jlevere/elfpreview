@@ -91,6 +91,7 @@ try {
       };
       const check = (frame) => {
         if (
+          !exclude.has(frame) &&
           frame.url().includes("vscode-webview") &&
           frame.url().includes("id=")
         ) {
@@ -133,6 +134,31 @@ try {
           check();
         }),
     );
+  const textAppears = (frame, text) =>
+    frame.evaluate(
+      (expected) =>
+        new Promise((resolve, reject) => {
+          const timer = setTimeout(() => {
+            observer.disconnect();
+            reject(new Error("Missing UI text: " + expected));
+          }, 10_000);
+          const check = () => {
+            if (document.body.innerText.includes(expected)) {
+              clearTimeout(timer);
+              observer.disconnect();
+              resolve();
+            }
+          };
+          const observer = new MutationObserver(check);
+          observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            characterData: true,
+          });
+          check();
+        }),
+      text,
+    );
   for (const [fixture, expected] of [
     ["simple_test", "00000000000023d0"],
     ["simple_test2", "23328"],
@@ -151,6 +177,84 @@ try {
       text.includes(expected),
       `${fixture}: expected ${expected}, got ${text}`,
     );
+    if (fixture === "simple_test2") {
+      await frame.getByRole("tab", { name: "Sections", exact: true }).focus();
+      await page.keyboard.press("ArrowRight");
+      assert.equal(
+        await frame
+          .getByRole("tab", { name: "Program Headers", exact: true })
+          .getAttribute("aria-selected"),
+        "true",
+      );
+      await page.keyboard.press("ArrowRight");
+      await textAppears(frame, "23328 of 23328 symbols");
+      assert.ok(
+        (await frame.getByRole("row").count()) < 100,
+        "Large symbol tables must remain virtualized",
+      );
+      await frame.getByLabel("Filter symbols", { exact: true }).fill("FMT");
+      await textAppears(frame, "1939 of 23328 symbols");
+      await frame
+        .getByLabel("Filter symbols", { exact: true })
+        .fill("no-symbol-with-this-name");
+      await textAppears(frame, "0 of 23328 symbols");
+      await frame.getByLabel("Filter symbols", { exact: true }).fill("fmt");
+      await textAppears(frame, "1939 of 23328 symbols");
+      await frame.locator(".vtlist").evaluate((element) => {
+        element.scrollTop = 500;
+      });
+      await frame.locator(".vtlist").evaluate(
+        (element) =>
+          new Promise((resolve) => {
+            if (element.scrollTop >= 500) resolve();
+            else element.addEventListener("scroll", resolve, { once: true });
+          }),
+      );
+      if (process.env.ELFPREVIEW_SCREENSHOT)
+        await page.screenshot({ path: process.env.ELFPREVIEW_SCREENSHOT });
+      const detached = page.waitForEvent("framedetached", {
+        predicate: (candidate) => candidate === frame,
+        timeout: 20_000,
+      });
+      await command({ action: "hide" });
+      await detached;
+      const restoredPromise = frameReady(new Set(page.frames()));
+      await command({
+        action: "open",
+        uri: pathToFileURL(path.join(root, "rust/tests/fixtures", fixture))
+          .href,
+      });
+      const restored = await restoredPromise;
+      await textAppears(restored, "1939 of 23328 symbols");
+      assert.equal(
+        await restored
+          .getByLabel("Filter symbols", { exact: true })
+          .inputValue(),
+        "fmt",
+      );
+      assert.equal(
+        await restored
+          .getByRole("tab", { name: "Symbols", exact: true })
+          .getAttribute("aria-selected"),
+        "true",
+      );
+      assert.ok(
+        (await restored
+          .locator(".vtlist")
+          .evaluate((element) => element.scrollTop)) >= 490,
+        "Scroll offset survives hidden-view recreation",
+      );
+      await page.setViewportSize({ width: 700, height: 900 });
+      assert.ok(
+        await restored.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+        "Narrow layouts scroll tables rather than the whole page",
+      );
+      console.log(
+        "Symbol filtering, keyboard tabs, virtualization, saved state and narrow layout passed",
+      );
+    }
     console.log(`Rendered ${fixture} in VS Code`);
     await command({ action: "close" });
   }
