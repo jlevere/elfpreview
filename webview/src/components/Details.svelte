@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { ElfInfo } from "../../../ts/src/protocol";
   import { vscode } from "../vscode";
-  import { readUiState, tabs, type Tab } from "../ui-state";
+  import { readUiState, tabs, type Tab, type Sort } from "../ui-state";
   import FileSummary from "./FileSummary.svelte";
   import DynamicInfo from "./DynamicInfo.svelte";
   import DataTable from "./DataTable.svelte";
@@ -11,6 +11,11 @@
   let selected = $state(saved.tab);
   let filter = $state(saved.filter);
   const offsets = $state(saved.offsets);
+  const sorts = $state(saved.sorts);
+  function changeSort(tab: Tab, sort: Sort | undefined) {
+    offsets[tab] = 0;
+    sorts[tab] = sort;
+  }
   const labels: Record<Tab, string> = {
     sections: "Sections",
     programs: "Program Headers",
@@ -30,7 +35,12 @@
   const programs = $derived(programColumns(data.info.class));
   const symbols = $derived(symbolColumns(data.info.class));
   $effect(() => {
-    vscode.setState({ tab: selected, filter, offsets: { ...offsets } });
+    vscode.setState({
+      tab: selected,
+      filter,
+      offsets: { ...offsets },
+      sorts: { ...sorts },
+    });
   });
 
   function keydown(event: KeyboardEvent) {
@@ -74,27 +84,31 @@
 </div>
 <div id="panel" role="tabpanel" aria-labelledby="tab-{selected}" tabindex="0">
   {#if selected === "sections"}
-    <h2>Section Headers</h2>
+    <h2 class="sr-only">Section Headers</h2>
     <DataTable
       rows={data.sectionheaders}
       columns={sections}
       label="Sections"
       layout="minmax(220px, 2fr) 1fr 180px 100px"
       offset={offsets.sections}
+      sort={sorts.sections}
+      onSort={(sort: Sort | undefined) => changeSort("sections", sort)}
       onScroll={(value: number) => (offsets.sections = value)}
     />
   {:else if selected === "programs"}
-    <h2>Program Headers</h2>
+    <h2 class="sr-only">Program Headers</h2>
     <DataTable
       rows={data.programheaders}
       columns={programs}
       label="Program headers"
       layout="1fr 70px 180px 180px 110px 110px"
       offset={offsets.programs}
+      sort={sorts.programs}
+      onSort={(sort: Sort | undefined) => changeSort("programs", sort)}
       onScroll={(value: number) => (offsets.programs = value)}
     />
   {:else if selected === "symbols"}
-    <h2>Static Symbol Table</h2>
+    <h2 class="sr-only">Static Symbol Table</h2>
     <div class="filter">
       <label for="symbol-filter">Filter symbols</label>
       <input
@@ -118,6 +132,8 @@
         label="Symbols"
         layout="180px 80px 80px 80px 90px minmax(220px, 1fr)"
         offset={offsets.symbols}
+        sort={sorts.symbols}
+        onSort={(sort: Sort | undefined) => changeSort("symbols", sort)}
         onScroll={(value: number) => (offsets.symbols = value)}
       />
     {/key}

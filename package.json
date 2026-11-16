@@ -92,7 +92,7 @@
     "test:extension": "node scripts/test-extension.mts",
     "watch:tsc": "tsc --noEmit --watch -p ts/tsconfig.json",
     "check:generated": "node scripts/generate-wit.mts --check",
-    "test:wasm": "pnpm esbuild && pnpm compile:rust && node scripts/test-node.mts ts/test/wasm.test.ts ts/test/protocol.test.ts ts/test/worker.test.ts",
+    "test:wasm": "pnpm esbuild && pnpm compile:rust && node scripts/test-node.mts ts/test/wasm.test.ts ts/test/protocol.test.ts ts/test/worker.test.ts scripts/ui.test.mts",
     "test:ui": "node scripts/test-ui.mts",
     "check:rust": "cargo fmt --check && cargo clippy --locked --all-targets -- -D warnings",
     "vscode:prepublish": "pnpm check && pnpm esbuild:prod && pnpm compile:rust"

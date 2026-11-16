@@ -7,6 +7,8 @@ import path from "node:path";
 
 export type Command =
   | { action: "open"; uri: string }
+  | { action: "theme"; theme: string }
+  | { action: "assertClipboard"; text: string }
   | { action: "close" | "finish" | "hide" | "split" | "assertSingleRead" };
 
 export async function run(): Promise<void> {
@@ -57,6 +59,16 @@ export async function run(): Promise<void> {
           vscode.Uri.parse(command.uri),
           "elfpreview.elfViewer",
         );
+      } else if (command.action === "theme") {
+        await vscode.workspace
+          .getConfiguration("workbench")
+          .update(
+            "colorTheme",
+            command.theme,
+            vscode.ConfigurationTarget.Global,
+          );
+      } else if (command.action === "assertClipboard") {
+        assert.equal(await vscode.env.clipboard.readText(), command.text);
       } else if (command.action === "split") {
         await vscode.commands.executeCommand(
           "workbench.action.splitEditorRight",

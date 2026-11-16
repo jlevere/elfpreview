@@ -251,12 +251,15 @@ try {
     const frame = await openView(
       pathToFileURL(path.join(root, "rust/tests/fixtures", fixture)).href,
     );
+    await settled(frame);
+    await frame.locator("summary").click();
     const text = await settled(frame);
     assert.ok(text.includes(fixture));
     assert.ok(
       text.includes(expected),
       `${fixture}: expected ${expected}, got ${text}`,
     );
+    await frame.locator("summary").click();
     if (fixture === "simple_test2") {
       await frame.getByRole("tab", { name: "Sections", exact: true }).focus();
       await page.keyboard.press("ArrowRight");
@@ -281,6 +284,44 @@ try {
       await textAppears(frame, "0 of 23328 symbols");
       await frame.getByLabel("Filter symbols", { exact: true }).fill("fmt");
       await textAppears(frame, "1939 of 23328 symbols");
+      await frame.getByRole("button", { name: "Size", exact: true }).click();
+      await frame.getByRole("button", { name: "Size", exact: true }).click();
+      assert.equal(
+        await frame
+          .getByRole("columnheader", { name: "Size" })
+          .getAttribute("aria-sort"),
+        "descending",
+      );
+      const sizes = await frame.getByRole("row").allTextContents();
+      assert.ok(sizes.length > 1);
+      await frame
+        .getByRole("button", { name: "Inspect row 1", exact: true })
+        .click();
+      const details = frame.getByRole("region", { name: "Row details" });
+      const copied = await details
+        .locator("dl > div")
+        .evaluateAll((items) =>
+          items
+            .map(
+              (item) =>
+                (item.querySelector("dt")?.textContent ?? "") +
+                "\t" +
+                (item.querySelector("dd")?.textContent ?? ""),
+            )
+            .join("\n"),
+        );
+      await frame
+        .getByRole("button", { name: "Copy row", exact: true })
+        .click();
+      await textAppears(frame, "Row copied");
+      await command({ action: "assertClipboard", text: copied });
+      await frame
+        .getByRole("button", { name: "Close details", exact: true })
+        .click();
+      const tableHeight = await frame
+        .locator(".vtlist")
+        .evaluate((element) => element.clientHeight);
+      assert.ok(tableHeight > 350, "The table uses available editor height");
       await frame.locator(".vtlist").evaluate(
         (element) =>
           new Promise<void>((resolve, reject) => {
@@ -332,6 +373,12 @@ try {
           .getAttribute("aria-selected"),
         "true",
       );
+      assert.equal(
+        await restored
+          .getByRole("columnheader", { name: "Size" })
+          .getAttribute("aria-sort"),
+        "descending",
+      );
       await restored.locator(".vtlist").evaluate(
         (element) =>
           new Promise<void>((resolve, reject) => {
@@ -354,6 +401,52 @@ try {
             check();
           }),
       );
+      for (const [theme, kind] of [
+        ["Default Light Modern", "vscode-light"],
+        ["Default High Contrast", "vscode-high-contrast"],
+        ["Default Dark Modern", "vscode-dark"],
+      ]) {
+        const themed = restored.evaluate(
+          (expected) =>
+            new Promise<void>((resolve, reject) => {
+              const timer = setTimeout(() => {
+                observer.disconnect();
+                reject(new Error("Theme did not apply: " + expected));
+              }, 10_000);
+              const check = () => {
+                if (document.body.classList.contains(expected)) {
+                  clearTimeout(timer);
+                  observer.disconnect();
+                  resolve();
+                }
+              };
+              const observer = new MutationObserver(check);
+              observer.observe(document.body, {
+                attributes: true,
+                attributeFilter: ["class"],
+              });
+              check();
+            }),
+          kind,
+        );
+        await Promise.all([themed, command({ action: "theme", theme })]);
+        const colors = await restored.evaluate(() => ({
+          background: getComputedStyle(document.body).backgroundColor,
+          foreground: getComputedStyle(document.body).color,
+          focus: getComputedStyle(document.body).getPropertyValue(
+            "--vscode-focusBorder",
+          ),
+        }));
+        assert.notEqual(colors.background, colors.foreground);
+        assert.ok(colors.focus.trim());
+        if (process.env.ELFPREVIEW_SCREENSHOT)
+          await page.screenshot({
+            path: process.env.ELFPREVIEW_SCREENSHOT.replace(
+              ".png",
+              "-" + kind + ".png",
+            ),
+          });
+      }
       await page.setViewportSize({ width: 700, height: 900 });
       assert.ok(
         await restored.evaluate(
@@ -369,11 +462,15 @@ try {
     await command({ action: "close" });
   }
   const virtual = await openView("elfpreview-test:/virtual-elf");
+  await settled(virtual);
+  await virtual.locator("summary").click();
   assert.ok((await settled(virtual)).includes("23328"));
   const [split] = await Promise.all([
     frameReady(new Set(page.frames())),
     command({ action: "split" }),
   ]);
+  await settled(split);
+  await split.locator("summary").click();
   assert.ok((await settled(split)).includes("23328"));
   await command({ action: "assertSingleRead" });
   await command({ action: "close" });
@@ -387,6 +484,8 @@ try {
   const elf32Path = path.join(temporary, "elf32-big-endian");
   await writeFile(elf32Path, elf32);
   const elf32View = await openView(pathToFileURL(elf32Path).href);
+  await settled(elf32View);
+  await elf32View.locator("summary").click();
   const elf32Text = await settled(elf32View);
   for (const expected of ["ELF32", "Big Endian", "TRU64", "0x00000000"])
     assert.ok(elf32Text.includes(expected));

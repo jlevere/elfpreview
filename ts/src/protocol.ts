@@ -19,10 +19,13 @@ export type PreviewState = { filename: string } & (
   | { status: "ready"; data: ElfInfo }
   | { status: "error"; message: string }
 );
-export type HostMessage = { type: "state"; state: PreviewState };
-export type ViewMessage = { type: "ready" };
+export type HostMessage =
+  { type: "state"; state: PreviewState } | { type: "copied" };
+export type ViewMessage = { type: "ready" } | { type: "copy"; text: string };
 
-export function isReadyMessage(message: unknown): message is ViewMessage {
+export function isReadyMessage(
+  message: unknown,
+): message is Extract<ViewMessage, { type: "ready" }> {
   return (
     typeof message === "object" &&
     message !== null &&
@@ -53,4 +56,18 @@ export function toWire(data: Types.Elfinfo): ElfInfo {
     })),
     dynlink: data.dynlink,
   };
+}
+
+export function isCopyMessage(
+  message: unknown,
+): message is Extract<ViewMessage, { type: "copy" }> {
+  return (
+    typeof message === "object" &&
+    message !== null &&
+    "type" in message &&
+    message.type === "copy" &&
+    "text" in message &&
+    typeof message.text === "string" &&
+    message.text.length <= 32 * 1024 * 1024 + 4096
+  );
 }
