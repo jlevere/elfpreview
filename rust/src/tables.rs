@@ -1,5 +1,8 @@
 use crate::elfpreview::parser::types;
-use goblin::elf::{Elf, program_header, section_header};
+use goblin::{
+    elf::{Elf, program_header, section_header, sym::Symtab},
+    strtab::Strtab,
+};
 
 pub(crate) fn build_dynlink_info(elf: &Elf<'_>) -> types::Dynlinkinfo {
     let is_dynamic = elf.dynamic.is_some() || elf.interpreter.is_some();
@@ -34,7 +37,8 @@ pub(crate) fn build_dynlink_info(elf: &Elf<'_>) -> types::Dynlinkinfo {
 pub(crate) fn build_section_info(elf: &Elf<'_>) -> Vec<types::Sectioninfo> {
     elf.section_headers
         .iter()
-        .map(|header| {
+        .enumerate()
+        .map(|(index, header)| {
             let name = elf
                 .shdr_strtab
                 .get_at(header.sh_name)
@@ -43,6 +47,11 @@ pub(crate) fn build_section_info(elf: &Elf<'_>) -> Vec<types::Sectioninfo> {
             let typename = section_header::sht_to_str(header.sh_type).to_string();
 
             types::Sectioninfo {
+                index: index as u32,
+                offset: header.sh_offset,
+                flags: header.sh_flags,
+                alignment: header.sh_addralign,
+                entry_size: header.sh_entsize,
                 name,
                 size: header.sh_size,
                 address: header.sh_addr,
@@ -78,6 +87,8 @@ pub(crate) fn build_program_info(elf: &Elf<'_>) -> Vec<types::Programinfo> {
             );
 
             types::Programinfo {
+                offset: header.p_offset,
+                alignment: header.p_align,
                 typename,
                 flagstring,
                 vaddr: header.p_vaddr,
@@ -89,12 +100,15 @@ pub(crate) fn build_program_info(elf: &Elf<'_>) -> Vec<types::Programinfo> {
         .collect()
 }
 
-pub(crate) fn build_sym_info(elf: &Elf<'_>) -> Vec<types::Symbolinfo> {
-    elf.syms
+pub(crate) fn build_sym_info(symbols: &Symtab<'_>, strings: &Strtab<'_>) -> Vec<types::Symbolinfo> {
+    symbols
         .iter()
-        .map(|sym| {
-            let name = elf.strtab.get_at(sym.st_name).unwrap_or("").to_string();
+        .enumerate()
+        .map(|(index, sym)| {
+            let name = strings.get_at(sym.st_name).unwrap_or("").to_string();
             types::Symbolinfo {
+                index: index as u32,
+                section_index: sym.st_shndx as u32,
                 name,
                 typestr: goblin::elf::sym::type_to_str(sym.st_type()).to_string(),
                 bind: goblin::elf::sym::bind_to_str(sym.st_bind()).to_string(),

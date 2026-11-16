@@ -50,3 +50,22 @@ test("the shipped core Wasm has no host imports and a bounded memory", async () 
     "Cannot grow beyond 512 MiB",
   );
 });
+
+test("dynamic symbols, table metadata and signed relocation addends cross the Wasm boundary exactly", async () => {
+  const parser = await ElfParser.create(await wasm);
+  const bytes = await readFile("rust/tests/fixtures/simple_test");
+  const first = parser.parse(bytes);
+  assert.equal(first.dynamicSymbols.length, 53);
+  assert.equal(first.relocations.length, 66);
+  assert.equal(first.dynamicSymbols[1].name, "free");
+  assert.equal(first.dynamicSymbols[1].sectionIndex, 0);
+  const table = first.sectionheaders.find(
+    (section) => section.name === ".rela.dyn",
+  );
+  assert.ok(table);
+  bytes.writeBigUInt64LE(0xfedcba9876543210n, Number(table.offset));
+  bytes.writeBigInt64LE(-9223372036854775807n, Number(table.offset) + 16);
+  const result = parser.parse(bytes);
+  assert.equal(result.relocations[0].offset, 0xfedcba9876543210n);
+  assert.equal(result.relocations[0].addend, -9223372036854775807n);
+});

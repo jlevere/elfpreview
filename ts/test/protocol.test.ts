@@ -149,3 +149,22 @@ test("clipboard requests require readiness and text and acknowledge completed wr
   assert.equal(sent.at(-1)?.type, "copied");
   connection.dispose();
 });
+
+test("new ELF tables are JSON safe without rounding signed or unsigned values", async () => {
+  const parser = await ElfParser.create(await readFile("dist/elfpreview.wasm"));
+  const bytes = await readFile("rust/tests/fixtures/simple_test");
+  const baseline = parser.parse(bytes);
+  const table = baseline.sectionheaders.find(
+    (section) => section.name === ".rela.dyn",
+  );
+  assert.ok(table);
+  bytes.writeBigUInt64LE(0xfedcba9876543210n, Number(table.offset));
+  bytes.writeBigInt64LE(-9223372036854775807n, Number(table.offset) + 16);
+  const wire = toWire(parser.parse(bytes));
+  assert.equal(wire.relocations[0].offset, "18364758544493064720");
+  assert.equal(wire.relocations[0].addend, "-9223372036854775807");
+  assert.equal(typeof wire.sectionheaders[1].offset, "string");
+  assert.equal(typeof wire.sectionheaders[1].flags, "string");
+  assert.equal(typeof wire.dynamicSymbols[1].value, "string");
+  assert.doesNotThrow(() => JSON.stringify(wire));
+});

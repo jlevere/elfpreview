@@ -260,6 +260,68 @@ try {
       `${fixture}: expected ${expected}, got ${text}`,
     );
     await frame.locator("summary").click();
+    if (fixture === "simple_test") {
+      await frame
+        .getByRole("tab", { name: "Dynamic Symbols", exact: true })
+        .click();
+      await textAppears(frame, "53 of 53 symbols");
+      await frame
+        .getByLabel("Filter dynamic symbols", { exact: true })
+        .fill("free");
+      await textAppears(frame, "1 of 53 symbols");
+      await frame
+        .getByRole("button", { name: "Inspect row 1", exact: true })
+        .click();
+      assert.ok(
+        (
+          await frame.getByRole("region", { name: "Row details" }).innerText()
+        ).includes("UND"),
+      );
+      await frame
+        .getByRole("tab", { name: "Relocations", exact: true })
+        .click();
+      await textAppears(frame, "66 of 66 relocations");
+      await frame
+        .getByLabel("Filter relocations", { exact: true })
+        .fill("free");
+      await textAppears(frame, "1 of 66 relocations");
+      await frame
+        .getByRole("button", { name: "Inspect row 1", exact: true })
+        .click();
+      const relocation = await frame
+        .getByRole("region", { name: "Row details" })
+        .innerText();
+      assert.ok(relocation.includes("0x0000000000009000"));
+      assert.ok(relocation.includes("R_X86_64_JUMP_SLOT"));
+      const width = await frame.evaluate(() => ({
+        scroll: document.documentElement.scrollWidth,
+        viewport: window.innerWidth,
+      }));
+      assert.ok(
+        width.scroll <= width.viewport,
+        "Relocation details must not overflow the page: " +
+          JSON.stringify(width),
+      );
+      if (process.env.ELFPREVIEW_SCREENSHOT)
+        await page.screenshot({
+          path: process.env.ELFPREVIEW_SCREENSHOT.replace(
+            ".png",
+            "-relocation.png",
+          ),
+        });
+      await frame
+        .getByRole("tab", { name: "Dynamic Symbols", exact: true })
+        .click();
+      assert.equal(
+        await frame
+          .getByLabel("Filter dynamic symbols", { exact: true })
+          .inputValue(),
+        "free",
+      );
+      console.log(
+        "Dynamic symbols, relocation details and independent filters passed",
+      );
+    }
     if (fixture === "simple_test2") {
       await frame.getByRole("tab", { name: "Sections", exact: true }).focus();
       await page.keyboard.press("ArrowRight");
@@ -465,6 +527,12 @@ try {
   await settled(virtual);
   await virtual.locator("summary").click();
   assert.ok((await settled(virtual)).includes("23328"));
+  await virtual
+    .getByRole("tab", { name: "Dynamic Symbols", exact: true })
+    .click();
+  await textAppears(virtual, "symbols");
+  await virtual.getByRole("tab", { name: "Relocations", exact: true }).click();
+  await textAppears(virtual, "relocations");
   const [split] = await Promise.all([
     frameReady(new Set(page.frames())),
     command({ action: "split" }),
