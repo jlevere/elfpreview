@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import type { Types } from "../../ts/src/elfpreview";
+  import type { Types } from "../../ts/src/generated/elfpreview";
   import { VirtualList } from "svelte-virtuallists";
 
   const {

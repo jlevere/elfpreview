@@ -1,11 +1,11 @@
 import * as vscode from "vscode";
 import * as path from "node:path";
-import { elfpreview, type Types } from "./elfpreview";
+import { type Types } from "./generated/elfpreview";
 import { ElfFileReader } from "./fileReader";
-import { RAL, Memory, WasmContext } from "@vscode/wasm-component-model";
+import { ElfParser } from "./parser";
 
 class ElfPreviewExtension {
-  private elfParser?: elfpreview.Exports;
+  private elfParser?: ElfParser;
   private context: vscode.ExtensionContext;
 
   constructor(context: vscode.ExtensionContext) {
@@ -33,18 +33,7 @@ class ElfPreviewExtension {
 
     try {
       const bits = await vscode.workspace.fs.readFile(wasmPath);
-      const module = await WebAssembly.compile(bits);
-
-      const wasmContext: WasmContext.Default = new WasmContext.Default();
-      const imports = elfpreview._.imports.create({}, wasmContext);
-
-      const instance = await RAL().WebAssembly.instantiate(module, imports);
-      wasmContext.initialize(new Memory.Default(instance.exports));
-
-      this.elfParser = elfpreview._.exports.bind(
-        instance.exports as elfpreview._.Exports,
-        wasmContext,
-      );
+      this.elfParser = await ElfParser.create(bits);
 
       console.log("ELF Parser WebAssembly module loaded successfully");
     } catch (error) {
@@ -112,7 +101,7 @@ class ElfPreviewExtension {
 class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
   constructor(
     private readonly extensionUri: vscode.Uri,
-    private readonly elfParser?: elfpreview.Exports,
+    private readonly elfParser?: ElfParser,
   ) {}
 
   openCustomDocument(uri: vscode.Uri): Promise<vscode.CustomDocument> {
@@ -299,7 +288,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
     if (!this.elfParser) {
       throw new Error("ELF Parser not initialized");
     }
-    return this.elfParser.elfparser.quickparseelf(elfData);
+    return this.elfParser.header(elfData);
   }
 
   private async parseElfDataAsync(elfData: Uint8Array): Promise<Types.Elfinfo> {
@@ -309,7 +298,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
 
     return Promise.resolve().then(() => {
       try {
-        const result = this.elfParser!.elfparser.parseelf(elfData);
+        const result = this.elfParser!.parse(elfData);
         return result;
       } catch (error) {
         throw error instanceof Error
@@ -326,7 +315,7 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
   private async validateElfFile(fileReader: ElfFileReader): Promise<void> {
     const headerData = await fileReader.readChunk(0, 64);
 
-    if (!this.elfParser?.elfparser.validateelf(headerData)) {
+    if (!this.elfParser?.validate(headerData)) {
       throw new Error("File is not recognized as an ELF");
     }
   }

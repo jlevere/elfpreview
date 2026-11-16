@@ -1,6 +1,6 @@
 import { mount } from "svelte";
 import App from "./App.svelte";
-import type { Types } from "../../ts/src/elfpreview";
+import type { Types } from "../../ts/src/generated/elfpreview";
 
 declare global {
   interface Window {
