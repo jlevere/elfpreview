@@ -1,0 +1,3 @@
+[target.wasm32-unknown-unknown]
+# Bound allocations from untrusted ELF metadata; each parser runs in its own worker.
+rustflags = ["-C", "link-arg=--max-memory=536870912"]

@@ -1,34 +1,35 @@
 import * as vscode from "vscode";
-import { ElfParser } from "./parser";
-import { toWire, type PreviewState } from "./protocol";
+import { ParserService } from "./parser-service";
+import { ElfDocument } from "./document";
 import { connectView, webviewHtml } from "./view";
 
 const viewType = "elfpreview.elfViewer";
 
-class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
+class ElfPreviewProvider
+  implements vscode.CustomReadonlyEditorProvider<ElfDocument>
+{
   constructor(
     private readonly extensionUri: vscode.Uri,
-    private readonly parser: ElfParser,
+    private readonly parser: ParserService,
+    private readonly log: vscode.LogOutputChannel,
   ) {}
 
-  openCustomDocument(uri: vscode.Uri): vscode.CustomDocument {
-    return { uri, dispose() {} };
+  openCustomDocument(
+    uri: vscode.Uri,
+    _context: vscode.CustomDocumentOpenContext,
+    token: vscode.CancellationToken,
+  ): ElfDocument {
+    if (token.isCancellationRequested) throw new vscode.CancellationError();
+    return new ElfDocument(uri, this.parser, this.log);
   }
 
-  async resolveCustomEditor(
-    document: vscode.CustomDocument,
-    panel: vscode.WebviewPanel,
-  ): Promise<void> {
-    const filename = document.uri.path.split("/").pop() ?? "ELF file";
-    let state: PreviewState = { status: "loading", filename };
-    const changes = new vscode.EventEmitter<PreviewState>();
-    const connection = connectView(panel.webview, () => state, changes.event);
-    let disposed = false;
-    panel.onDidDispose(() => {
-      disposed = true;
-      connection.dispose();
-      changes.dispose();
-    });
+  resolveCustomEditor(document: ElfDocument, panel: vscode.WebviewPanel): void {
+    const connection = connectView(
+      panel.webview,
+      () => document.snapshot,
+      document.onDidChange,
+    );
+    panel.onDidDispose(() => connection.dispose());
     const dist = vscode.Uri.joinPath(this.extensionUri, "dist");
     panel.webview.options = { enableScripts: true, localResourceRoots: [dist] };
     panel.webview.html = webviewHtml(
@@ -40,37 +41,21 @@ class ElfPreviewProvider implements vscode.CustomReadonlyEditorProvider {
         .asWebviewUri(vscode.Uri.joinPath(dist, "webview.css"))
         .toString(),
     );
-    try {
-      const bytes = await vscode.workspace.fs.readFile(document.uri);
-      if (disposed) return;
-      state = {
-        status: "ready",
-        filename,
-        data: toWire(this.parser.parse(bytes)),
-      };
-    } catch (error) {
-      state = {
-        status: "error",
-        filename,
-        message: error instanceof Error ? error.message : String(error),
-      };
-    }
-    if (!disposed) changes.fire(state);
   }
 }
 
-export async function activate(
-  context: vscode.ExtensionContext,
-): Promise<void> {
-  const parser = await ElfParser.create(
-    await vscode.workspace.fs.readFile(
-      vscode.Uri.joinPath(context.extensionUri, "dist", "elfpreview.wasm"),
-    ),
+export function activate(context: vscode.ExtensionContext): void {
+  const log = vscode.window.createOutputChannel("ELF Preview", { log: true });
+  const parser = new ParserService(
+    vscode.Uri.joinPath(context.extensionUri, "dist", "worker.js").fsPath,
   );
   context.subscriptions.push(
+    log,
+
     vscode.window.registerCustomEditorProvider(
       viewType,
-      new ElfPreviewProvider(context.extensionUri, parser),
+      new ElfPreviewProvider(context.extensionUri, parser, log),
+      { supportsMultipleEditorsPerDocument: true },
     ),
     vscode.commands.registerCommand(
       "elfpreview.showPreview",

@@ -79,7 +79,7 @@ try {
     assert.deepEqual(JSON.parse(reply.value), { ok: true });
   };
   const page = await app.firstWindow();
-  const frameReady = () =>
+  const frameReady = (exclude = new Set()) =>
     new Promise((resolve, reject) => {
       const deadline = setTimeout(() => {
         cleanup();
@@ -154,6 +154,16 @@ try {
     console.log(`Rendered ${fixture} in VS Code`);
     await command({ action: "close" });
   }
+  const virtualPromise = frameReady();
+  await command({ action: "open", uri: "elfpreview-test:/virtual-elf" });
+  const virtual = await virtualPromise;
+  assert.ok((await settled(virtual)).includes("23328"));
+  const splitPromise = frameReady(new Set(page.frames()));
+  await command({ action: "split" });
+  assert.ok((await settled(await splitPromise)).includes("23328"));
+  await command({ action: "assertSingleRead" });
+  await command({ action: "close" });
+  console.log("Virtual filesystem and split views share one document parse");
   const malformed = path.join(temporary, "<img onerror=alert(1)>");
   await writeFile(malformed, "not an ELF");
   const framePromise = frameReady();

@@ -6,14 +6,14 @@ const sveltePreprocess = require("svelte-preprocess");
 
 async function main() {
   const extensionConfig = {
-    entryPoints: ["ts/src/extension.ts"],
+    entryPoints: ["ts/src/extension.ts", "ts/src/worker.ts"],
     bundle: true,
     format: "cjs",
     minify: production,
     sourcemap: !production,
     sourcesContent: false,
     platform: "node",
-    outfile: "dist/extension.js",
+    outdir: "dist",
     external: ["vscode"],
     logLevel: "warning",
   };
