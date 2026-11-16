@@ -32,7 +32,7 @@ try {
     bundle: true,
     external: ["vscode"],
   });
-  await new Promise((resolve, reject) => {
+  await new Promise<void>((resolve, reject) => {
     const child = spawn(
       process.env.VSCODE_EXECUTABLE ?? "code",
       [

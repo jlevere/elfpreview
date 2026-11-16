@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createServer } from "node:net";
+import { createServer, type Socket } from "node:net";
 import { createInterface } from "node:readline";
 import { once } from "node:events";
 import { execFile } from "node:child_process";
@@ -9,14 +9,18 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
-import { _electron } from "playwright";
+import { _electron, type ElectronApplication, type Frame } from "playwright";
+import type { Command } from "../ts/test/ui-host.ts";
 
-async function withDeadline(operation, description) {
-  let deadline;
+async function withDeadline<T>(
+  operation: Promise<T>,
+  description: string,
+): Promise<T> {
+  let deadline: NodeJS.Timeout | undefined;
   try {
     return await Promise.race([
       operation,
-      new Promise((_, reject) => {
+      new Promise<never>((_, reject) => {
         deadline = setTimeout(
           () => reject(new Error(description + " timed out after 30 seconds")),
           30_000,
@@ -36,8 +40,8 @@ const temporary = await mkdtemp(
   ),
 );
 const server = createServer();
-let app;
-let socket;
+let app: ElectronApplication | undefined;
+let socket: Socket | undefined;
 try {
   await mkdir(path.join(temporary, "profile/User"), { recursive: true });
   await writeFile(
@@ -90,10 +94,10 @@ try {
   await once(server, "listening");
   const address = server.address();
   assert.ok(address && typeof address !== "string");
-  const connected = new Promise((resolve) =>
+  const connected = new Promise<Socket>((resolve) =>
     server.once("connection", (peer) => {
       socket = peer;
-      resolve();
+      resolve(peer);
     }),
   );
   app = await _electron.launch({
@@ -119,22 +123,24 @@ try {
     },
     timeout: 30_000,
   });
-  await withDeadline(connected, "Extension host connection");
-  const messages = createInterface({ input: socket });
+  const connection = await withDeadline(connected, "Extension host connection");
+  const messages = createInterface({ input: connection });
   // A queued async iterator preserves messages arriving during Electron startup.
   const replies = messages[Symbol.asyncIterator]();
   const nextReply = () =>
     withDeadline(replies.next(), "Extension host response");
-  assert.deepEqual(JSON.parse((await nextReply()).value), { ready: true });
-  const command = async (value) => {
-    socket.write(JSON.stringify(value) + "\n");
+  const ready = await nextReply();
+  assert.ok(!ready.done, "Extension host disconnected before readiness");
+  assert.deepEqual(JSON.parse(ready.value), { ready: true });
+  const command = async (value: Command) => {
+    connection.write(JSON.stringify(value) + "\n");
     const reply = await nextReply();
     assert.ok(!reply.done, "Extension host disconnected");
     assert.deepEqual(JSON.parse(reply.value), { ok: true });
   };
   const page = await app.firstWindow();
-  const frameReady = (exclude = new Set()) =>
-    new Promise((resolve, reject) => {
+  const frameReady = (exclude = new Set<Frame>()) =>
+    new Promise<Frame>((resolve, reject) => {
       const deadline = setTimeout(() => {
         cleanup();
         reject(new Error("ELF webview did not load"));
@@ -143,7 +149,7 @@ try {
         clearTimeout(deadline);
         page.off("framenavigated", check);
       };
-      const check = (frame) => {
+      const check = (frame: Frame) => {
         if (
           !exclude.has(frame) &&
           frame.url().includes("vscode-webview") &&
@@ -153,7 +159,7 @@ try {
           frame
             .evaluate(
               () =>
-                new Promise((resolve) => {
+                new Promise<boolean>((resolve) => {
                   const check = () => {
                     if (document.getElementById("app")) {
                       observer.disconnect();
@@ -180,17 +186,17 @@ try {
       page.on("framenavigated", check);
       for (const frame of page.frames()) check(frame);
     });
-  const openView = async (uri, exclude = new Set()) => {
+  const openView = async (uri: string, exclude = new Set<Frame>()) => {
     const [frame] = await Promise.all([
       frameReady(exclude),
       command({ action: "open", uri }),
     ]);
     return frame;
   };
-  const settled = (frame) =>
+  const settled = (frame: Frame) =>
     frame.evaluate(
       () =>
-        new Promise((resolve, reject) => {
+        new Promise<string>((resolve, reject) => {
           const deadline = setTimeout(() => {
             observer.disconnect();
             reject(new Error("Preview remained loading"));
@@ -211,10 +217,10 @@ try {
           check();
         }),
     );
-  const textAppears = (frame, text) =>
+  const textAppears = (frame: Frame, text: string) =>
     frame.evaluate(
       (expected) =>
-        new Promise((resolve, reject) => {
+        new Promise<void>((resolve, reject) => {
           const timer = setTimeout(() => {
             observer.disconnect();
             reject(new Error("Missing UI text: " + expected));
@@ -277,7 +283,7 @@ try {
       await textAppears(frame, "1939 of 23328 symbols");
       await frame.locator(".vtlist").evaluate(
         (element) =>
-          new Promise((resolve, reject) => {
+          new Promise<void>((resolve, reject) => {
             const timer = setTimeout(
               () => reject(new Error("Scroll event was not delivered")),
               10_000,
@@ -328,7 +334,7 @@ try {
       );
       await restored.locator(".vtlist").evaluate(
         (element) =>
-          new Promise((resolve, reject) => {
+          new Promise<void>((resolve, reject) => {
             const timer = setTimeout(() => {
               element.removeEventListener("scroll", check);
               reject(
