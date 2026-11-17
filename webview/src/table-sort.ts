@@ -1,6 +1,11 @@
 import type { Sort } from "./ui-state";
 export type Column<Row> = {
   label: string;
+  width?: number;
+  grow?: boolean;
+  display?: (row: Row) => string;
+  detailLabel?: string;
+  hidden?: boolean;
   value: (row: Row) => string;
   order?: (row: Row) => bigint;
 };
@@ -16,7 +21,9 @@ export function sortRows<Row>(
   return rows
     .map((row) => ({
       row,
-      key: column.order ? column.order(row) : column.value(row),
+      key: column.order
+        ? column.order(row)
+        : (column.display ?? column.value)(row),
     }))
     .sort(
       (a, b) =>

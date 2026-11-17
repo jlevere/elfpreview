@@ -31,6 +31,7 @@ export namespace Types {
 	};
 
 	export type Symbolinfo = {
+		demangledName?: string | undefined;
 		index: u32;
 		sectionIndex: u32;
 		name: string;
@@ -139,6 +140,7 @@ export namespace Types.$ {
 		['memsz', $wcm.u64],
 	]);
 	export const Symbolinfo = new $wcm.RecordType<Types.Symbolinfo>([
+		['demangledName', new $wcm.OptionType<string>($wcm.wstring)],
 		['index', $wcm.u32],
 		['sectionIndex', $wcm.u32],
 		['name', $wcm.wstring],

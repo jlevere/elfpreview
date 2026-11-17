@@ -69,3 +69,18 @@ test("dynamic symbols, table metadata and signed relocation addends cross the Wa
   assert.equal(result.relocations[0].offset, 0xfedcba9876543210n);
   assert.equal(result.relocations[0].addend, -9223372036854775807n);
 });
+
+test("worker demangling retains original names without requiring host imports", async () => {
+  const parser = await ElfParser.create(await wasm);
+  const data = await readFile("rust/tests/fixtures/simple_test2");
+  const report = parser.parse(data);
+  const named = report.symbols.filter(
+    (symbol) => symbol.demangledName !== undefined,
+  );
+  assert.ok(named.length > 100);
+  assert.ok(named.some((symbol) => symbol.demangledName?.includes("::")));
+  for (const symbol of named) {
+    assert.notEqual(symbol.demangledName, symbol.name);
+    assert.ok(symbol.demangledName!.length <= 16 * 1024);
+  }
+});

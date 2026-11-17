@@ -4,7 +4,7 @@ A lightweight VS Code extension that provides d information about ELF files in a
 
 The extention adds an aditional editor, similar to how a hex editor might work, which is used to display a table view of information about the currenly open file.
 
-![example-view](./docs/example-simple-view.png)
+![Symbol inspection with demangled names and row details](./docs/example-simple-view.png)
 
 ## Table of Contents
 
@@ -51,7 +51,7 @@ code --install-extension elfpreview-<release>.vsix
 
 ## Usage
 
-There are two ways to activate the extention, with the [Context Menu](#context-menu) or [Editor Selection](#editor-selection).
+Open an ELF file with the [Context Menu](#context-menu) or [Editor Selection](#editor-selection).
 
 ### Context Menu
 
@@ -61,15 +61,19 @@ Simply right click on an elf binary and select `ELF: Show Preview`
 
 ### Editor Selection
 
-This is the normal view when you open a non text file. Vscode does not support editor selection by file type, only file extension, so you get this window.
+Opening a binary in the text editor may show an unsupported encoding message.
 
 ![Unsupported text encoding](./docs/usage-unsupported.png)
 
-When you select open anyway, you are presented with another dialog option to select the editor you wish to open the file with. `elfpreview` should be listed as an option.
+Choose **Open Anyway**, then select **ELF Preview** from the editor picker.
 
-![Select an Editor ](./docs/usage-editor.png)
+![Select ELF Preview in the editor picker](./docs/usage-editor.png)
 
-![usage](./docs/usage.gif)
+Filter symbols by their original or demangled names, enable **Demangle names** for readable Rust and Itanium C++ names, and use **Columns** to choose which fields to show. Drag a column boundary to resize it.
+
+Click a row to inspect all of its fields, including hidden columns. Copy an individual value or the complete row; original symbol names remain available alongside demangled names. Arrow keys, Page Up/Down and Home/End browse rows, Enter opens details, and Escape closes them.
+
+![Filtering symbols, adjusting columns, and copying an inspected value](./docs/usage.gif)
 
 ## Extension Settings
 

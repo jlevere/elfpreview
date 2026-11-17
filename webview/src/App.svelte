@@ -8,12 +8,16 @@
     filename: "ELF file",
   });
   let clipboard = $state("");
+  let copySequence = $state(0);
   onMount(() => {
     const receive = (event: MessageEvent<HostMessage>) => {
       if (event.data.type === "state") {
         preview = event.data.state;
         clipboard = "";
-      } else if (event.data.type === "copied") clipboard = "Row copied";
+      } else if (event.data.type === "copied") {
+        clipboard = "Copied to clipboard";
+        copySequence++;
+      }
     };
     window.addEventListener("message", receive);
     vscode.postMessage({ type: "ready" });
@@ -42,5 +46,7 @@
       <pre>{preview.message}</pre>
     </div>
   {:else}<Details data={preview.data} />{/if}
-  {#if clipboard}<p class="clipboard-status" role="status">{clipboard}</p>{/if}
+  {#if clipboard}{#key copySequence}<p class="clipboard-status" role="status">
+        {clipboard}
+      </p>{/key}{/if}
 </main>

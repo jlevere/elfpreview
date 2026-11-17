@@ -11,7 +11,7 @@ fn fixture(name: &str) -> Vec<u8> {
     .unwrap()
 }
 
-fn header_bytes(class: u8, endian: u8) -> Vec<u8> {
+pub(crate) fn header_bytes(class: u8, endian: u8) -> Vec<u8> {
     let mut header = Header::new(goblin::container::Ctx::default());
     header.e_ident[..4].copy_from_slice(ELFMAG);
     header.e_ident[EI_CLASS] = class;

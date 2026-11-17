@@ -1,5 +1,6 @@
 wit_bindgen::generate!({ path: "../wit/", world: "elfpreview" });
 
+mod demangle;
 mod limits;
 mod metadata;
 mod relocations;
@@ -26,8 +27,8 @@ fn parse(data: &[u8]) -> goblin::error::Result<types::Elfinfo> {
         info: metadata::file_info(&elf.header, stripped)?,
         sectionheaders: tables::build_section_info(&elf),
         programheaders: tables::build_program_info(&elf),
-        symbols: tables::build_sym_info(&elf.syms, &elf.strtab),
-        dynamic_symbols: tables::build_sym_info(&elf.dynsyms, &elf.dynstrtab),
+        symbols: tables::build_sym_info(&elf.syms, &elf.strtab, &mut budget),
+        dynamic_symbols: tables::build_sym_info(&elf.dynsyms, &elf.dynstrtab, &mut budget),
         relocations,
         dynlink: tables::build_dynlink_info(&elf),
     })

@@ -164,7 +164,6 @@ input:focus {
   border: 1px solid var(--vscode-panel-border);
 }
 .data-table {
-  min-width: 850px;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -210,7 +209,7 @@ input:focus {
   width: 100%;
   height: 100%;
   text-align: left;
-  padding: 4px 8px;
+  padding: 4px 12px 4px 8px;
   color: inherit;
   background: transparent;
   border: 0;
@@ -304,4 +303,138 @@ pre {
   margin: 0 0 8px;
   color: var(--vscode-descriptionForeground);
   flex-shrink: 0;
+}
+
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.sort-description {
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.9em;
+}
+.column-picker {
+  position: relative;
+  margin-left: auto;
+}
+.column-picker > summary {
+  list-style: none;
+  padding: 3px 8px;
+  color: var(--vscode-button-secondaryForeground);
+  background: var(--vscode-button-secondaryBackground);
+  border: 1px solid var(--vscode-button-border, transparent);
+}
+.column-picker > summary:hover {
+  background: var(--vscode-button-secondaryHoverBackground);
+}
+.column-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 3;
+  min-width: 180px;
+  max-height: 45vh;
+  overflow: auto;
+  padding: 6px;
+  color: var(--vscode-menu-foreground);
+  background: var(--vscode-menu-background);
+  border: 1px solid
+    var(
+      --vscode-menu-border,
+      var(--vscode-contrastBorder, var(--vscode-panel-border))
+    );
+  box-shadow: 0 2px 8px var(--vscode-widget-shadow);
+}
+.column-menu label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+}
+.column-menu label:hover {
+  color: var(--vscode-menu-selectionForeground);
+  background: var(--vscode-menu-selectionBackground);
+}
+.column-menu input,
+.demangle-toggle input {
+  min-width: 0;
+  margin: 0;
+  accent-color: var(--vscode-focusBorder);
+}
+.column-menu button {
+  margin: 6px;
+}
+.demangle-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.column-resize {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 7px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+  border-right: 1px solid var(--vscode-panel-border);
+}
+.column-resize:hover,
+.column-resize:focus-visible {
+  border-right: 2px solid var(--vscode-focusBorder);
+}
+.table-row[tabindex] {
+  cursor: pointer;
+}
+.table-row[tabindex]:focus {
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+  outline: 1px solid var(--vscode-list-focusOutline, var(--vscode-focusBorder));
+  outline-offset: -1px;
+}
+
+input.column-resize {
+  appearance: none;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-right: 1px solid var(--vscode-panel-border);
+  border-radius: 0;
+}
+.column-resize::-webkit-slider-thumb {
+  appearance: none;
+  width: 0;
+  height: 0;
+}
+.column-resize::-moz-range-thumb {
+  border: 0;
+  width: 0;
+  height: 0;
+}
+
+.row-details dl > div {
+  grid-template-columns: 130px minmax(0, 1fr) auto;
+}
+.field-copy {
+  align-self: start;
+  color: var(--vscode-textLink-foreground);
+  background: transparent;
+  border: 0;
+  padding: 2px 6px;
+}
+.field-copy:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+.row-viewport {
+  flex: 1;
+  min-height: 0;
+}
+.row-viewport .table-row {
+  height: var(--row-height);
 }

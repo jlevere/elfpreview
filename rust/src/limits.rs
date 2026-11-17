@@ -55,6 +55,16 @@ pub(crate) struct Budget {
     remaining: usize,
 }
 impl Budget {
+    pub(crate) fn remaining_text(&self) -> usize {
+        self.remaining
+    }
+    pub(crate) fn optional_text(&mut self, bytes: usize) -> bool {
+        let Some(remaining) = self.remaining.checked_sub(bytes) else {
+            return false;
+        };
+        self.remaining = remaining;
+        true
+    }
     pub(crate) fn relocation(&mut self, strings: &[&str]) -> Result<()> {
         self.records += 1;
         if self.records > MAX_RECORDS {
