@@ -1,3 +1,4 @@
+import { readColumnSettings, type ColumnSettings } from "./column-state";
 export const tabs = [
   "sections",
   "programs",
@@ -15,11 +16,15 @@ export type UiState = {
   relocationFilter: string;
   offsets: Record<Tab, number>;
   sorts: Partial<Record<Tab, Sort>>;
+  columns: Partial<Record<Tab, ColumnSettings>>;
+  demangle: boolean;
 };
 
 export function readUiState(value: unknown): UiState {
   const result: UiState = {
     sorts: {},
+    columns: {},
+    demangle: false,
     tab: "sections",
     filter: "",
     dynamicFilter: "",
@@ -66,6 +71,20 @@ export function readUiState(value: unknown): UiState {
       ) {
         result.sorts[tab] = { column: sort.column, direction: sort.direction };
       }
+    }
+  }
+  if ("demangle" in value && typeof value.demangle === "boolean")
+    result.demangle = value.demangle;
+  if (
+    "columns" in value &&
+    value.columns &&
+    typeof value.columns === "object"
+  ) {
+    for (const tab of tabs) {
+      if (tab in value.columns)
+        result.columns[tab] = readColumnSettings(
+          Reflect.get(value.columns, tab),
+        );
     }
   }
   return result;

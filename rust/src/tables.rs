@@ -100,7 +100,11 @@ pub(crate) fn build_program_info(elf: &Elf<'_>) -> Vec<types::Programinfo> {
         .collect()
 }
 
-pub(crate) fn build_sym_info(symbols: &Symtab<'_>, strings: &Strtab<'_>) -> Vec<types::Symbolinfo> {
+pub(crate) fn build_sym_info(
+    symbols: &Symtab<'_>,
+    strings: &Strtab<'_>,
+    budget: &mut crate::limits::Budget,
+) -> Vec<types::Symbolinfo> {
     symbols
         .iter()
         .enumerate()
@@ -109,6 +113,7 @@ pub(crate) fn build_sym_info(symbols: &Symtab<'_>, strings: &Strtab<'_>) -> Vec<
             types::Symbolinfo {
                 index: index as u32,
                 section_index: sym.st_shndx as u32,
+                demangled_name: crate::demangle::name(&name, budget),
                 name,
                 typestr: goblin::elf::sym::type_to_str(sym.st_type()).to_string(),
                 bind: goblin::elf::sym::bind_to_str(sym.st_bind()).to_string(),

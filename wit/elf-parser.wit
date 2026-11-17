@@ -25,6 +25,7 @@ interface types {
   }
 
   record symbolinfo {
+    demangled-name: option<string>,
     index: u32,
     section-index: u32,
     name: string,

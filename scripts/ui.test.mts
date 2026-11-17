@@ -1,3 +1,4 @@
+import { symbolSection } from "../webview/src/symbol-label";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { sortRows, type Column } from "../webview/src/table-sort";
@@ -58,4 +59,59 @@ void test("saved table state validates sorts and offsets independently", () => {
   assert.deepEqual(state.sorts, {
     symbols: { column: "Size", direction: "descending" },
   });
+});
+
+void test("column preferences validate widths and reject malformed persisted state", () => {
+  const state = readUiState({
+    demangle: true,
+    columns: {
+      symbols: {
+        widths: {
+          Name: 470,
+          Size: -1,
+          Value: Infinity,
+          Index: 999999,
+          Bind: "wide",
+        },
+        hidden: ["Index", 1, null],
+      },
+      sections: null,
+    },
+  });
+  assert.equal(state.demangle, true);
+  assert.deepEqual(state.columns.symbols, {
+    widths: { Name: 470, Size: 48, Index: 1200 },
+    hidden: ["Index"],
+  });
+  assert.deepEqual(state.columns.sections, { widths: {}, hidden: [] });
+  assert.equal(readUiState({ demangle: "true" }).demangle, false);
+});
+
+void test("display names sort independently of original values used for copying", () => {
+  const rows = [
+    { name: "_Z2aav", display: "zeta()" },
+    { name: "_Z2zzv", display: "alpha()" },
+  ];
+  const columns: Array<Column<(typeof rows)[number]>> = [
+    { label: "Name", value: (row) => row.name, display: (row) => row.display },
+  ];
+  assert.deepEqual(
+    sortRows(rows, columns, { column: "Name", direction: "ascending" }).map(
+      (row) => row.name,
+    ),
+    ["_Z2zzv", "_Z2aav"],
+  );
+  assert.equal(columns[0].value(rows[0]), "_Z2aav");
+});
+
+void test("section labels include names only for ordinary indexes present in the file", () => {
+  const names = new Map([
+    [15, ".text"],
+    [0xfff1, "misleading reserved name"],
+  ]);
+  assert.equal(symbolSection(15, names), "15 (.text)");
+  assert.equal(symbolSection(16, names), "16");
+  assert.equal(symbolSection(0, names), "0 (UND)");
+  assert.equal(symbolSection(0xfff1, names), "65521 (ABS)");
+  assert.equal(symbolSection(0xffff, names), "65535 (XINDEX)");
 });

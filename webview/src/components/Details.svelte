@@ -1,5 +1,6 @@
 <script lang="ts">
-  import type { ElfInfo } from "../../../ts/src/protocol";
+  import type { ColumnSettings } from "../column-state";
+  import type { ElfInfo, SymbolInfo } from "../../../ts/src/protocol";
   import { vscode } from "../vscode";
   import { readUiState, tabs, type Tab, type Sort } from "../ui-state";
   import FileSummary from "./FileSummary.svelte";
@@ -25,6 +26,8 @@
   );
   const offsets = $state(saved.offsets);
   const sorts = $state(saved.sorts);
+  const columnSettings = $state(saved.columns);
+  let demangle = $state(saved.demangle);
   function changeSort(tab: Tab, sort: Sort | undefined) {
     offsets[tab] = 0;
     sorts[tab] = sort;
@@ -38,7 +41,11 @@
     dynamic: "Dynamic Info",
   };
   const query = $derived(filter.toLowerCase());
-  const names = $derived(symbolRows.map((symbol) => symbol.name.toLowerCase()));
+  const names = $derived(
+    symbolRows.map((symbol) =>
+      `${symbol.name} ${symbol.demangledName ?? ""}`.toLowerCase(),
+    ),
+  );
   const filtered = $derived(
     query
       ? symbolRows.filter((_, index) => names[index].includes(query))
@@ -46,7 +53,9 @@
   );
   const sections = $derived(sectionColumns(data.info.class));
   const programs = $derived(programColumns(data.info.class));
-  const symbols = $derived(symbolColumns(data.info.class));
+  const symbols = $derived(
+    symbolColumns(data.info.class, data.sectionheaders, demangle),
+  );
   const relocations = $derived(
     relocationColumns(data.info.class, data.info.filetype),
   );
@@ -71,6 +80,8 @@
       relocationFilter,
       offsets: { ...offsets },
       sorts: { ...sorts },
+      columns: { ...columnSettings },
+      demangle,
     });
   });
 
@@ -121,9 +132,10 @@
         rows={data.sectionheaders}
         columns={sections}
         label="Sections"
-        minWidth={1200}
-        layout="60px minmax(160px, 2fr) 100px 180px 120px 90px 90px 180px 100px"
         offset={offsets.sections}
+        settings={columnSettings.sections}
+        onSettings={(settings: ColumnSettings) =>
+          (columnSettings.sections = settings)}
         sort={sorts.sections}
         onSort={(sort: Sort | undefined) => changeSort("sections", sort)}
         onScroll={(value: number) => (offsets.sections = value)}
@@ -134,9 +146,10 @@
         rows={data.programheaders}
         columns={programs}
         label="Program headers"
-        minWidth={1250}
-        layout="130px 70px 180px 90px 180px 180px 110px 110px"
         offset={offsets.programs}
+        settings={columnSettings.programs}
+        onSettings={(settings: ColumnSettings) =>
+          (columnSettings.programs = settings)}
         sort={sorts.programs}
         onSort={(sort: Sort | undefined) => changeSort("programs", sort)}
         onScroll={(value: number) => (offsets.programs = value)}
@@ -154,6 +167,8 @@
         <input
           id="symbol-filter"
           type="search"
+          placeholder="Original or demangled name"
+          title="Search original and demangled names"
           value={filter}
           oninput={(event) => {
             const next = event.currentTarget.value;
@@ -162,6 +177,11 @@
             else staticFilter = next;
           }}
         />
+        <label
+          class="demangle-toggle"
+          title="Show Rust and Itanium C++ names when available; original names remain in row details"
+          ><input type="checkbox" bind:checked={demangle} />Demangle names</label
+        >
         <span role="status"
           >{filtered.length} of {symbolRows.length} symbols</span
         >
@@ -171,9 +191,16 @@
           rows={filtered}
           columns={symbols}
           label={labels[selected]}
-          minWidth={1150}
-          layout="60px 80px 180px 80px 80px 80px 90px minmax(220px, 1fr)"
           offset={offsets[selected]}
+          settings={columnSettings[selected]}
+          onSettings={(settings: ColumnSettings) =>
+            (columnSettings[selected] = settings)}
+          extraDetails={[
+            {
+              label: "Demangled name",
+              value: (row: SymbolInfo) => row.demangledName ?? "—",
+            },
+          ]}
           sort={sorts[selected]}
           onSort={(sort: Sort | undefined) => changeSort(selected, sort)}
           onScroll={(value: number) => (offsets[selected] = value)}
@@ -205,9 +232,10 @@
           rows={filteredRelocations}
           columns={relocations}
           label="Relocations"
-          minWidth={1350}
-          layout="130px 180px 120px 240px 100px minmax(220px, 1fr) 160px"
           offset={offsets.relocations}
+          settings={columnSettings.relocations}
+          onSettings={(settings: ColumnSettings) =>
+            (columnSettings.relocations = settings)}
           sort={sorts.relocations}
           onSort={(sort: Sort | undefined) => changeSort("relocations", sort)}
           onScroll={(value: number) => (offsets.relocations = value)}

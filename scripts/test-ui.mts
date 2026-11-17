@@ -242,6 +242,59 @@ try {
         }),
       text,
     );
+  const copyAndCheck = async (frame: Frame, button: string, text: string) => {
+    const copied = frame.evaluate(
+      () =>
+        new Promise<void>((resolve, reject) => {
+          const receive = (event: MessageEvent<unknown>) => {
+            if (
+              event.data &&
+              typeof event.data === "object" &&
+              "type" in event.data &&
+              event.data.type === "copied"
+            ) {
+              clearTimeout(timer);
+              window.removeEventListener("message", receive);
+              resolve();
+            }
+          };
+          const timer = setTimeout(() => {
+            window.removeEventListener("message", receive);
+            reject(new Error("Clipboard acknowledgment did not arrive"));
+          }, 10_000);
+          window.addEventListener("message", receive);
+        }),
+    );
+    await Promise.all([
+      copied,
+      frame.getByRole("button", { name: button, exact: true }).click(),
+    ]);
+    await command({ action: "assertClipboard", text });
+  };
+  const navigateRow = async (frame: Frame, key: string, label: string) => {
+    const focused = frame.evaluate(
+      (expected) =>
+        new Promise<void>((resolve, reject) => {
+          const check = () => {
+            if (
+              document.activeElement?.getAttribute("aria-label") === expected
+            ) {
+              clearTimeout(timer);
+              document.removeEventListener("focusin", check);
+              resolve();
+            }
+          };
+          const timer = setTimeout(() => {
+            document.removeEventListener("focusin", check);
+            reject(new Error("Keyboard row focus did not arrive: " + expected));
+          }, 10_000);
+          document.addEventListener("focusin", check);
+          check();
+        }),
+      label,
+    );
+    await Promise.all([focused, page.keyboard.press(key)]);
+  };
   for (const [fixture, expected] of [
     ["simple_test", "00000000000023d0"],
     ["simple_test2", "23328"],
@@ -252,14 +305,14 @@ try {
       pathToFileURL(path.join(root, "rust/tests/fixtures", fixture)).href,
     );
     await settled(frame);
-    await frame.locator("summary").click();
+    await frame.locator(".file-properties > summary").click();
     const text = await settled(frame);
     assert.ok(text.includes(fixture));
     assert.ok(
       text.includes(expected),
       `${fixture}: expected ${expected}, got ${text}`,
     );
-    await frame.locator("summary").click();
+    await frame.locator(".file-properties > summary").click();
     if (fixture === "simple_test") {
       await frame
         .getByRole("tab", { name: "Dynamic Symbols", exact: true })
@@ -270,7 +323,7 @@ try {
         .fill("free");
       await textAppears(frame, "1 of 53 symbols");
       await frame
-        .getByRole("button", { name: "Inspect row 1", exact: true })
+        .getByRole("row", { name: "Inspect row 1", exact: true })
         .click();
       assert.ok(
         (
@@ -286,7 +339,7 @@ try {
         .fill("free");
       await textAppears(frame, "1 of 66 relocations");
       await frame
-        .getByRole("button", { name: "Inspect row 1", exact: true })
+        .getByRole("row", { name: "Inspect row 1", exact: true })
         .click();
       const relocation = await frame
         .getByRole("region", { name: "Row details" })
@@ -333,6 +386,19 @@ try {
       );
       await page.keyboard.press("ArrowRight");
       await textAppears(frame, "23328 of 23328 symbols");
+      assert.deepEqual(await frame.locator(".column-sort").allTextContents(), [
+        "Name",
+        "Section",
+        "Value",
+        "Size",
+        "Type",
+      ]);
+      assert.ok(
+        await frame
+          .locator(".table-scroll")
+          .evaluate((element) => element.scrollWidth <= element.clientWidth),
+        "Default symbol columns should fit the editor without configuration",
+      );
       const renderedRows = await frame.getByRole("row").count();
       assert.ok(
         renderedRows > 1 && renderedRows < 100,
@@ -354,12 +420,99 @@ try {
           .getAttribute("aria-sort"),
         "descending",
       );
+      await frame.getByLabel("Demangle names", { exact: true }).check();
+      await frame.locator(".column-picker > summary").click();
+      for (const name of ["Index", "Type", "Bind", "Visibility"])
+        await frame
+          .locator(".column-menu")
+          .getByLabel(name, { exact: true })
+          .uncheck();
+      await frame.locator(".column-picker > summary").click();
+      assert.equal(await frame.getByRole("columnheader").count(), 4);
+      const resize = frame.getByRole("slider", {
+        name: "Resize Name column",
+        exact: true,
+      });
+      await resize.focus();
+      await page.keyboard.press("Home");
+      assert.equal(Number(await resize.inputValue()), 380);
+      await page.keyboard.press("ArrowRight");
+      assert.equal(Number(await resize.inputValue()), 390);
+      const handle = await resize.boundingBox();
+      assert.ok(handle);
+      await page.mouse.move(
+        handle.x + handle.width / 2,
+        handle.y + handle.height / 2,
+      );
+      await page.mouse.down();
+      await page.mouse.move(
+        handle.x + handle.width / 2 + 80,
+        handle.y + handle.height / 2,
+      );
+      await page.mouse.up();
+      assert.equal(Number(await resize.inputValue()), 470);
       const sizes = await frame.getByRole("row").allTextContents();
       assert.ok(sizes.length > 1);
       await frame
-        .getByRole("button", { name: "Inspect row 1", exact: true })
+        .getByRole("row", { name: "Inspect row 1", exact: true })
         .click();
       const details = frame.getByRole("region", { name: "Row details" });
+      const original = await details
+        .locator("dl > div")
+        .filter({ has: frame.locator("dt", { hasText: /^Original name$/ }) })
+        .locator("dd")
+        .innerText();
+      const demangled = await details
+        .locator("dl > div")
+        .filter({ has: frame.locator("dt", { hasText: /^Demangled name$/ }) })
+        .locator("dd")
+        .innerText();
+      assert.ok(original.startsWith("_Z"));
+      assert.ok(demangled.includes("::"));
+      assert.equal(
+        await frame
+          .getByRole("row", { name: "Inspect row 1", exact: true })
+          .getByRole("cell")
+          .first()
+          .innerText(),
+        demangled,
+      );
+      assert.ok((await details.innerText()).includes("(.text)"));
+      // Sorting changes ordering without discarding the object being inspected.
+      await frame.getByRole("button", { name: "Name", exact: true }).click();
+      assert.equal(
+        await details
+          .locator("dl > div")
+          .filter({ has: frame.locator("dt", { hasText: /^Original name$/ }) })
+          .locator("dd")
+          .innerText(),
+        original,
+      );
+      await frame.getByRole("button", { name: "Size", exact: true }).click();
+      await frame.getByRole("button", { name: "Size", exact: true }).click();
+      await frame
+        .getByRole("row", { name: "Inspect row 1", exact: true })
+        .focus();
+      await navigateRow(frame, "ArrowDown", "Inspect row 2");
+      await navigateRow(frame, "End", "Inspect row 1939");
+      assert.equal(await frame.locator('.table-row[tabindex="0"]').count(), 1);
+      await navigateRow(frame, "Home", "Inspect row 1");
+      assert.equal(
+        await details
+          .locator("dl > div")
+          .filter({ has: frame.locator("dt", { hasText: /^Original name$/ }) })
+          .locator("dd")
+          .innerText(),
+        original,
+      );
+      const value = await details
+        .locator("dl > div")
+        .filter({ has: frame.locator("dt", { hasText: /^Value$/ }) })
+        .locator("dd")
+        .innerText();
+      await copyAndCheck(frame, "Copy Original name", original);
+      await copyAndCheck(frame, "Copy Demangled name", demangled);
+      await copyAndCheck(frame, "Copy Value", value);
       const copied = await details
         .locator("dl > div")
         .evaluateAll((items) =>
@@ -372,11 +525,14 @@ try {
             )
             .join("\n"),
         );
-      await frame
-        .getByRole("button", { name: "Copy row", exact: true })
-        .click();
-      await textAppears(frame, "Row copied");
-      await command({ action: "assertClipboard", text: copied });
+      await copyAndCheck(frame, "Copy row", copied);
+      if (process.env.ELFPREVIEW_SCREENSHOT)
+        await page.screenshot({
+          path: process.env.ELFPREVIEW_SCREENSHOT.replace(
+            ".png",
+            "-inspector.png",
+          ),
+        });
       await frame
         .getByRole("button", { name: "Close details", exact: true })
         .click();
@@ -441,6 +597,20 @@ try {
           .getAttribute("aria-sort"),
         "descending",
       );
+      assert.equal(await restored.getByRole("columnheader").count(), 4);
+      assert.equal(
+        Number(
+          await restored
+            .getByRole("slider", { name: "Resize Name column", exact: true })
+            .inputValue(),
+        ),
+        470,
+      );
+      assert.ok(
+        await restored
+          .getByLabel("Demangle names", { exact: true })
+          .isChecked(),
+      );
       await restored.locator(".vtlist").evaluate(
         (element) =>
           new Promise<void>((resolve, reject) => {
@@ -463,6 +633,16 @@ try {
             check();
           }),
       );
+      if (process.env.ELFPREVIEW_SCREENSHOT) {
+        await restored.locator(".column-picker > summary").click();
+        await page.screenshot({
+          path: process.env.ELFPREVIEW_SCREENSHOT.replace(
+            ".png",
+            "-columns.png",
+          ),
+        });
+        await restored.locator(".column-picker > summary").click();
+      }
       for (const [theme, kind] of [
         ["Default Light Modern", "vscode-light"],
         ["Default High Contrast", "vscode-high-contrast"],
@@ -509,6 +689,46 @@ try {
             ),
           });
       }
+      await restored.locator(".column-picker > summary").click();
+      for (const name of ["Section", "Value", "Size"])
+        await restored
+          .locator(".column-menu")
+          .getByLabel(name, { exact: true })
+          .uncheck();
+      assert.ok(
+        await restored
+          .locator(".column-menu")
+          .getByLabel("Name", { exact: true })
+          .isDisabled(),
+      );
+      await restored
+        .getByRole("button", { name: "Reset columns", exact: true })
+        .click();
+      assert.equal(await restored.getByRole("columnheader").count(), 5);
+      assert.equal(
+        Number(
+          await restored
+            .getByRole("slider", { name: "Resize Name column", exact: true })
+            .inputValue(),
+        ),
+        380,
+      );
+      await restored.locator(".column-picker > summary").click();
+      // Rows are also operable without a pointer.
+      const keyboardRow = restored
+        .getByRole("row", { name: /^Inspect row / })
+        .first();
+      await keyboardRow.focus();
+      await page.keyboard.press("Enter");
+      assert.equal(
+        await restored.getByRole("region", { name: "Row details" }).count(),
+        1,
+      );
+      await page.keyboard.press("Escape");
+      assert.equal(
+        await restored.getByRole("region", { name: "Row details" }).count(),
+        0,
+      );
       await page.setViewportSize({ width: 700, height: 900 });
       assert.ok(
         await restored.evaluate(
@@ -525,7 +745,7 @@ try {
   }
   const virtual = await openView("elfpreview-test:/virtual-elf");
   await settled(virtual);
-  await virtual.locator("summary").click();
+  await virtual.locator(".file-properties > summary").click();
   assert.ok((await settled(virtual)).includes("23328"));
   await virtual
     .getByRole("tab", { name: "Dynamic Symbols", exact: true })
@@ -538,7 +758,7 @@ try {
     command({ action: "split" }),
   ]);
   await settled(split);
-  await split.locator("summary").click();
+  await split.locator(".file-properties > summary").click();
   assert.ok((await settled(split)).includes("23328"));
   await command({ action: "assertSingleRead" });
   await command({ action: "close" });
@@ -553,7 +773,7 @@ try {
   await writeFile(elf32Path, elf32);
   const elf32View = await openView(pathToFileURL(elf32Path).href);
   await settled(elf32View);
-  await elf32View.locator("summary").click();
+  await elf32View.locator(".file-properties > summary").click();
   const elf32Text = await settled(elf32View);
   for (const expected of ["ELF32", "Big Endian", "TRU64", "0x00000000"])
     assert.ok(elf32Text.includes(expected));
