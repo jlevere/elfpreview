@@ -724,11 +724,26 @@ try {
         await restored.getByRole("region", { name: "Row details" }).count(),
         1,
       );
-      await page.keyboard.press("Escape");
-      assert.equal(
-        await restored.getByRole("region", { name: "Row details" }).count(),
-        0,
+      const closed = restored.evaluate(
+        () =>
+          new Promise<void>((resolve, reject) => {
+            const check = () => {
+              if (!document.querySelector(".row-details")) {
+                clearTimeout(timer);
+                observer.disconnect();
+                resolve();
+              }
+            };
+            const timer = setTimeout(() => {
+              observer.disconnect();
+              reject(new Error("Escape did not close the row inspector"));
+            }, 10_000);
+            const observer = new MutationObserver(check);
+            observer.observe(document.body, { childList: true, subtree: true });
+            check();
+          }),
       );
+      await Promise.all([closed, page.keyboard.press("Escape")]);
       await page.setViewportSize({ width: 700, height: 900 });
       assert.ok(
         await restored.evaluate(
