@@ -730,6 +730,53 @@ try {
         await restored.getByRole("region", { name: "Row details" }).count(),
         1,
       );
+      // Resizing the virtual list can replace its row nodes. Keep keyboard focus
+      // on the same logical row instead of silently returning it to the body.
+      const resizeList = async (height: number) =>
+        restored.evaluate(
+          (height) =>
+            new Promise<void>((resolve, reject) => {
+              const active = document.activeElement;
+              const list = document.querySelector<HTMLElement>(".vtlist");
+              const row = list?.querySelector("[data-row-index]");
+              if (!list || !row || !active || active === document.body) {
+                reject(
+                  new Error("A table control must have focus before resizing"),
+                );
+                return;
+              }
+              const label = active.matches("[data-row-index]")
+                ? active.getAttribute("aria-label")
+                : undefined;
+              const observer = new MutationObserver(() => {
+                if (row.isConnected) return;
+                clearTimeout(timer);
+                observer.disconnect();
+                const current = document.activeElement;
+                if (
+                  label
+                    ? current?.getAttribute("aria-label") === label
+                    : current === active
+                )
+                  resolve();
+                else
+                  reject(
+                    new Error(
+                      "Resizing the virtual list changed keyboard focus",
+                    ),
+                  );
+              });
+              const timer = setTimeout(() => {
+                observer.disconnect();
+                reject(new Error("The virtual list did not resize"));
+              }, 10_000);
+              observer.observe(list, { childList: true, subtree: true });
+              list.style.flex = "none";
+              list.style.height = height + "px";
+            }),
+          height,
+        );
+      await resizeList(112);
       const closed = restored.evaluate(
         () =>
           new Promise<void>((resolve, reject) => {
@@ -750,6 +797,9 @@ try {
           }),
       );
       await Promise.all([closed, page.keyboard.press("Escape")]);
+      // Explicitly moving to another control must end row focus restoration.
+      await restored.getByLabel("Filter symbols", { exact: true }).focus();
+      await resizeList(224);
       await page.setViewportSize({ width: 700, height: 900 });
       assert.ok(
         await restored.evaluate(
