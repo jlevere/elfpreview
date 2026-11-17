@@ -43,19 +43,24 @@
     await tick();
     if (!viewport?.isConnected) return;
     pendingFocus?.disconnect();
+    let focusedRow: HTMLElement | undefined;
     const focus = () => {
+      if (focusedRow?.isConnected) return;
+      if (focusedRow && document.activeElement !== document.body) {
+        pendingFocus?.disconnect();
+        return;
+      }
       const row = viewport.querySelector(`[data-row-index="${targetIndex}"]`);
-      if (!(row instanceof HTMLElement)) return false;
+      if (!(row instanceof HTMLElement)) return;
+      focusedRow = row;
       row.focus({ preventScroll: true });
-      pendingFocus?.disconnect();
-      return true;
     };
-    // Virtual rows may not exist yet. Focus follows the render notification,
-    // rather than waiting a guessed interval or polling for an element.
-    if (!focus()) {
-      pendingFocus = new MutationObserver(focus);
-      pendingFocus.observe(viewport, { childList: true, subtree: true });
-    }
+    // The virtual list replaces row nodes when its range changes, including
+    // after the inspector resizes it. Follow those render notifications until
+    // focus deliberately leaves the rows; a successful focus is not final.
+    pendingFocus = new MutationObserver(focus);
+    pendingFocus.observe(viewport, { childList: true, subtree: true });
+    focus();
     const list = viewport.querySelector(".vtlist");
     if (list instanceof HTMLElement) {
       const top = targetIndex * rowHeight;
@@ -63,6 +68,10 @@
       else if (top + rowHeight > list.scrollTop + list.clientHeight)
         list.scrollTop = top + rowHeight - list.clientHeight;
     }
+  }
+  function focusin(event: FocusEvent) {
+    if (event.target instanceof Node && !viewport.contains(event.target))
+      pendingFocus?.disconnect();
   }
   // VS Code forwards bubbling keys to workbench commands even when default is prevented.
   // Keep keys consumed by this table inside the table.
@@ -112,6 +121,12 @@
     void navigate(next);
   }
 </script>
+
+<svelte:document
+  onfocusin={focusin}
+  onpointerdown={() => pendingFocus?.disconnect()}
+/>
+<svelte:window onblur={() => pendingFocus?.disconnect()} />
 
 <div
   class="row-viewport"
