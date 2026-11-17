@@ -105,6 +105,7 @@
         return;
     }
     event.preventDefault();
+    event.stopPropagation();
     selected = tabs[next];
     document.getElementById(`tab-${selected}`)?.focus();
   }

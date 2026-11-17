@@ -20,6 +20,7 @@
   function startResize(event: PointerEvent) {
     if (event.button !== 0) return;
     event.preventDefault();
+    event.stopPropagation();
     const handle = event.currentTarget;
     if (!(handle instanceof HTMLElement)) return;
     const width = handle.parentElement?.getBoundingClientRect().width ?? 120;
@@ -33,6 +34,7 @@
   function resizeKey(event: KeyboardEvent) {
     if (!["ArrowLeft", "ArrowRight", "Home"].includes(event.key)) return;
     event.preventDefault();
+    event.stopPropagation();
     const handle = event.currentTarget;
     if (!(handle instanceof HTMLElement)) return;
     const width =

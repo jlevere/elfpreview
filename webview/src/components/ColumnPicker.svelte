@@ -26,6 +26,7 @@
         picker.open = false;
         picker.querySelector("summary")?.focus();
         event.preventDefault();
+        event.stopPropagation();
       }
     };
     document.addEventListener("pointerdown", dismiss);

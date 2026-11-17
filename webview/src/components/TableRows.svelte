@@ -64,6 +64,8 @@
         list.scrollTop = top + rowHeight - list.clientHeight;
     }
   }
+  // VS Code forwards bubbling keys to workbench commands even when default is prevented.
+  // Keep keys consumed by this table inside the table.
   function keydown(event: KeyboardEvent, row: Row, index: number) {
     const list = viewport.querySelector(".vtlist");
     const page = Math.max(
@@ -75,11 +77,13 @@
       case "Enter":
       case " ":
         event.preventDefault();
+        event.stopPropagation();
         onInspect(row);
         void navigate(index, false);
         return;
       case "Escape":
         event.preventDefault();
+        event.stopPropagation();
         onInspect(undefined);
         return;
       case "ArrowDown":
@@ -104,6 +108,7 @@
         return;
     }
     event.preventDefault();
+    event.stopPropagation();
     void navigate(next);
   }
 </script>
