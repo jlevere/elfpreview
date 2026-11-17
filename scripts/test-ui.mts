@@ -139,7 +139,7 @@ try {
     assert.deepEqual(JSON.parse(reply.value), { ok: true });
   };
   const page = await app.firstWindow();
-  const frameReady = (exclude = new Set<Frame>()) =>
+  const frameReady = (exclude: ReadonlySet<Frame>) =>
     new Promise<Frame>((resolve, reject) => {
       const deadline = setTimeout(() => {
         cleanup();
@@ -186,7 +186,10 @@ try {
       page.on("framenavigated", check);
       for (const frame of page.frames()) check(frame);
     });
-  const openView = async (uri: string, exclude = new Set<Frame>()) => {
+  const openView = async (uri: string) => {
+    // An editor command can finish before the previous webview detaches. Only
+    // a new frame belongs to this open operation, even if old editors remain.
+    const exclude = new Set(page.frames());
     const [frame] = await Promise.all([
       frameReady(exclude),
       command({ action: "open", uri }),
@@ -582,7 +585,6 @@ try {
       ]);
       const restored = await openView(
         pathToFileURL(path.join(root, "rust/tests/fixtures", fixture)).href,
-        new Set(page.frames()),
       );
       await textAppears(restored, "1939 of 23328 symbols");
       assert.equal(
@@ -812,7 +814,9 @@ try {
       );
     }
     console.log(`Rendered ${fixture} in VS Code`);
-    await command({ action: "close" });
+    // Opening the second fixture while the first is still open must select the
+    // new preview rather than an already-rendered frame from the first file.
+    if (fixture !== "simple_test") await command({ action: "close" });
   }
   const virtual = await openView("elfpreview-test:/virtual-elf");
   await settled(virtual);
