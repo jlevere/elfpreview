@@ -29,10 +29,10 @@
         event.stopPropagation();
       }
     };
-    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("pointerdown", dismiss, true);
     document.addEventListener("keydown", escape);
     return () => {
-      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("pointerdown", dismiss, true);
       document.removeEventListener("keydown", escape);
     };
   });

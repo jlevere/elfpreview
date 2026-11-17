@@ -438,6 +438,7 @@ try {
       assert.equal(Number(await resize.inputValue()), 380);
       await page.keyboard.press("ArrowRight");
       assert.equal(Number(await resize.inputValue()), 390);
+      await frame.locator(".column-picker > summary").click();
       const handle = await resize.boundingBox();
       assert.ok(handle);
       await page.mouse.move(
@@ -450,6 +451,11 @@ try {
         handle.y + handle.height / 2,
       );
       await page.mouse.up();
+      assert.equal(
+        await frame.locator(".column-picker").getAttribute("open"),
+        null,
+        "Resizing outside the menu dismisses it",
+      );
       assert.equal(Number(await resize.inputValue()), 470);
       const sizes = await frame.getByRole("row").allTextContents();
       assert.ok(sizes.length > 1);
