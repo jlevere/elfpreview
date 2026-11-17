@@ -87,6 +87,15 @@ If you experence any other issues, please submit an issue here: [elfpreview/issu
 
 ## Release Notes
 
+### 0.2.0
+
+- Parse ELF files in cancellable background workers with bounded report sizes and safer error handling.
+- Inspect dynamic symbols, REL/RELA relocations, and additional ELF metadata.
+- Use VS Code themed tables with sorting, configurable columns, keyboard navigation, and row inspection with copy controls.
+- Display optional Rust and Itanium C++ demangled names alongside original names, and section names alongside indexes.
+- Preserve filters and table preferences, and refresh the screenshots and workflow demo.
+- Modernize Rust, TypeScript, testing, and trusted Marketplace publishing. Requires VS Code 1.98 or newer on a desktop or remote Node extension host.
+
 ### 0.1.1
 
 Added more information about symbols
